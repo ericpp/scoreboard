@@ -20,7 +20,7 @@ let boosterScores
 let apps
 let appScores
 
-const messageTime = 1
+const messageTime = 15
 
 let lightning
 
@@ -31,60 +31,56 @@ lastBoostAt.setMinutes(0)
 lastBoostAt.setSeconds(0)
 lastBoostAt = Math.floor(lastBoostAt / 1000)
 
-let lastPaymentHashes = []
+let lastInvoiceId = null
 
-let nwcInterval = 30000
+let pollInterval = 20000
 
 let pew = new Audio('pew.mp3')
 
 async function getBoosts(old) {
-    let options = {
-        "type": "incoming",
-        // "limit": 50,
-        "from": lastBoostAt,
+    let page = 1
+    let items = 25
+    let boosts = []
+
+    // apply podcast filter if specified in page url
+    let params = (new URL(document.location)).searchParams;
+    let podcast = params.get("podcast");
+
+    for (let idx = 0; idx < 10; idx++) { // safety for now
+        const query = new URLSearchParams()
+        query.set("page", page)
+        query.set("items", items)
+
+        if (lastInvoiceId) {
+            query.set("since", lastInvoiceId)
+        }
+        else {
+            query.set("created_at_gt", lastBoostAt)
+        }
+
+        const result = await fetch(`/api/boosts?${query}`)
+        const transactions = await result.json()
+
+        boosts = [...boosts, ...transactions]
+
+        if (!transactions || transactions.length === 0 || transactions.length < items) {
+            break
+        }
+
+        page++
     }
 
-    // if (lastBoostAt) {
-    //     options.from = lastBoostAt
-    // }
+    if (podcast) {
+        boosts = boosts.filter(x => x.boostagram.podcast == podcast)
+    }
 
-    const response = await lightning.listTransactions(options)
-console.log(response)
-    const paymentHashes = []
-
-    const transactions = response.result.transactions.map(transaction => {
-        lastBoostAt = Math.max(lastBoostAt, transaction.created_at)
-        paymentHashes.push(transaction.payment_hash)
-
-        if (lastPaymentHashes.includes(transaction.payment_hash)) {
-            return
-        }
-
-        if (!transaction.metadata || !transaction.metadata.custom_records || !transaction.metadata.custom_records[7629169]) {
-            return
-        }
-
-        return transaction
-    })
-
-    transactions.sort((a, b) => a.created_at - b.created_at)
-
-    const boosts = transactions.map(transaction => {
-        try {
-            const tlv = atob(transaction.metadata.custom_records[7629169])
-            return JSON.parse(tlv)
-        }
-        catch (e) {
-            return
-        }
-    }).filter(x => x)
+    boosts.sort((a, b) => a.creation_date - b.creation_date)
 
     boosts.forEach(boost => {
-        // tracker.addBoost(boost, old)
-         tracker.addBoost(boost, false)
+        lastBoostAt = boost.creation_date
+        lastInvoiceId = boost.identifier
+        tracker.addBoost(boost.boostagram, old)
     })
-
-    lastPaymentHashes = paymentHashes
 }
 
 function setup(){
@@ -99,7 +95,9 @@ function setup(){
     boosters = new Scoreboard("- TOP BOOSTERS -", boosterScores)
     apps = new Scoreboard("- TOP APPS -", appScores)
 
-    initLightning()
+    getBoosts(true).then(() => {
+        setInterval(() => getBoosts(), pollInterval)
+    })
 
     fontSize = windowHeight / heightToFont
     boxWidth = windowWidth / 1.75
