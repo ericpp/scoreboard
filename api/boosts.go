@@ -2,6 +2,7 @@ package handler
 
 import (
   "encoding/json"
+  "errors"
   "fmt"
   "io/ioutil"
   "net/http"
@@ -49,6 +50,10 @@ func RequestAccessToken() (string, error) {
     return "", err
   }
 
+  if js["error"] != nil {
+    return "", errors.New(js["error_description"].(string))
+  }
+
   token := js["access_token"].(string)
 
   return token, nil
@@ -57,11 +62,15 @@ func RequestAccessToken() (string, error) {
 func GetAccessToken() (string, error) {
   body, err := os.ReadFile("/tmp/alby-access")
 
-  if err == nil {
+  if len(body) == 48 && err == nil {
     return string(body), nil
   }
 
-  token, nil := RequestAccessToken()
+  token, err := RequestAccessToken()
+
+  if err != nil {
+    return "", err
+  }
 
   os.WriteFile("/tmp/alby-access", []byte(token), 0644)
 
