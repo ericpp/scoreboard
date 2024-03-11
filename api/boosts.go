@@ -192,6 +192,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
   }
 
   var transactions []map[string]interface{}
+log.Print(body)
 
   if err := json.Unmarshal([]byte(body), &transactions); err != nil {
     log.Print(err)
