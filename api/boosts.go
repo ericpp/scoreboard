@@ -170,7 +170,7 @@ log.Print(resp)
 
   body, err := ioutil.ReadAll(resp.Body)
 
-log.Print(body)
+log.Print(string(body))
 
   if err != nil {
     log.Print(err)
@@ -185,23 +185,23 @@ func Handler(w http.ResponseWriter, r *http.Request) {
   query := make(map[string]string)
 
   if r.FormValue("page") != "" {
-    query["page"] = "page"
+    query["page"] = r.FormValue("page")
   }
 
   if r.FormValue("items") != "" {
-    query["items"] = "items"
+    query["items"] = r.FormValue("items")
   }
 
   if r.FormValue("since") != "" {
-    query["q[since]"] = "since"
+    query["q[since]"] = r.FormValue("since")
   }
 
   if r.FormValue("created_at_lt") != "" {
-    query["q[created_at_lt]"] = "created_at_lt"
+    query["q[created_at_lt]"] = r.FormValue("created_at_lt")
   }
 
   if r.FormValue("created_at_gt") != "" {
-    query["q[created_at_gt]"] = "created_at_gt"
+    query["q[created_at_gt]"] = r.FormValue("created_at_gt")
   }
 
   token, err := GetAccessToken()
