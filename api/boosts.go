@@ -6,9 +6,7 @@ import (
   "fmt"
   "io/ioutil"
   "net/http"
-  "net/url"
   "log"
-  "strings"
   "os"
 )
 
@@ -21,60 +19,18 @@ type IncomingBoost struct {
   Value        float64      `json:"value"`
 }
 
-func RequestAccessToken() (string, error) {
-  postUrl := "https://api.getalby.com/oauth/token"
-
-  form := url.Values{}
-  form.Add("client_id", os.Getenv("ALBY_CLIENT_ID"))
-  form.Add("client_secret", os.Getenv("ALBY_CLIENT_SECRET"))
-  form.Add("grant_type", "refresh_token")
-  form.Add("refresh_token", os.Getenv("ALBY_REFRESH_TOKEN"))
-  encoded := form.Encode()
-
-  client := &http.Client{}
-  req, _ := http.NewRequest("POST", postUrl, strings.NewReader(encoded))
-
-  req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-  req.Header.Set("User-Agent", "Scoreboard")
-
-  resp, _ := client.Do(req)
-
-  body, err := ioutil.ReadAll(resp.Body)
-  if err != nil {
-    return "", err
-  }
-
-  var js map[string]interface{}
-
-  if err := json.Unmarshal(body, &js); err != nil {
-    return "", err
-  }
-
-  if js["error"] != nil {
-    return "", errors.New(js["error_description"].(string))
-  }
-
-  token := js["access_token"].(string)
-
-  return token, nil
-}
-
 func GetAccessToken() (string, error) {
   body, err := os.ReadFile("/tmp/alby-access")
 
-  if len(body) == 48 && err == nil {
-    return string(body), nil
-  }
-
-  token, err := RequestAccessToken()
-
   if err != nil {
     return "", err
   }
 
-  os.WriteFile("/tmp/alby-access", []byte(token), 0644)
+  if len(body) != 48 {
+    return "", errors.New("Invalid access token length")
+  }
 
-  return token, nil
+  return string(body), nil
 }
 
 
