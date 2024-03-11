@@ -220,7 +220,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
     os.Exit(1)
   }
 
-  if strings.Contains(body, "invalid access token") {
+  if strings.Contains(body, "expired access token") || strings.Contains(body, "invalid access token") {
     token, err = RefreshAccessToken(token)
     if err != nil {
       log.Print(err)
