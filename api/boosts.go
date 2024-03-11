@@ -53,12 +53,14 @@ func GetAccessToken() (*AlbyToken, error) {
   var result KVResult
 
   if err := json.Unmarshal(body, &result); err != nil {
+    log.Print(body)
     return nil, err
   }
 
   var token AlbyToken
 
   if err := json.Unmarshal([]byte(result.Result), &token); err != nil {
+    log.Print(body)
     return nil, err
   }
 
@@ -123,6 +125,7 @@ func RefreshAccessToken(currToken *AlbyToken) (*AlbyToken, error) {
   var token AlbyToken
 
   if err := json.Unmarshal(body, &token); err != nil {
+    log.Print(body)
     return nil, err
   }
 
@@ -235,6 +238,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
   if err := json.Unmarshal([]byte(body), &transactions); err != nil {
     log.Print(err)
+    log.Print(body)
     os.Exit(1)
   }
 
@@ -255,7 +259,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
   w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-  js, err := json.Marshal(boosts); 
+  js, err := json.Marshal(boosts);
 
   if err != nil {
     log.Print(err)
