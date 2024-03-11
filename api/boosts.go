@@ -12,6 +12,10 @@ import (
   "os"
 )
 
+type KVResult struct {
+  Result           string  `json:"result"`
+}
+
 type AlbyToken struct {
   AccessToken      string  `json:"access_token"`
   ExpiresIn        float64 `json:"expires_in"`
@@ -23,12 +27,12 @@ type AlbyToken struct {
 }
 
 type IncomingBoost struct {
-  Amount       float64      `json:"amount"`
-  Boostagram   interface{}  `json:"boostagram"`
-  CreatedAt    string       `json:"created_at"`
-  CreationDate float64      `json:"creation_date"`
-  Identifier   string       `json:"identifier"`
-  Value        float64      `json:"value"`
+  Amount           float64      `json:"amount"`
+  Boostagram       interface{}  `json:"boostagram"`
+  CreatedAt        string       `json:"created_at"`
+  CreationDate     float64      `json:"creation_date"`
+  Identifier       string       `json:"identifier"`
+  Value            float64      `json:"value"`
 }
 
 func GetAccessToken() (*AlbyToken, error) {
@@ -48,9 +52,17 @@ func GetAccessToken() (*AlbyToken, error) {
 
   log.Print(string(body))
 
+  var result KVResult
+
+  if err := json.Unmarshal(body, &result); err != nil {
+    return nil, err
+  }
+
+  log.Print(result.Result)
+
   var token AlbyToken
 
-  if err := json.Unmarshal(body, &token); err != nil {
+  if err := json.Unmarshal(result.Result, &token); err != nil {
     return nil, err
   }
 
