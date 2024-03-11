@@ -12,6 +12,16 @@ import (
   "os"
 )
 
+type AlbyToken struct {
+  AccessToken      string  `json:"access_token"`
+  ExpiresIn        float64 `json:"expires_in"`
+  RefreshToken     string  `json:"refresh_token"`
+  Scope            string  `json:"scope"`
+  TokenType        string  `json:"token_type"`
+  Error            string  `json:"error,omitempty"`
+  ErrorDescription string  `json:"error_description,omitempty"`
+}
+
 type IncomingBoost struct {
   Amount       float64      `json:"amount"`
   Boostagram   interface{}  `json:"boostagram"`
@@ -21,14 +31,39 @@ type IncomingBoost struct {
   Value        float64      `json:"value"`
 }
 
-func RequestAccessToken() (string, error) {
+func GetAccessToken() (*AlbyToken, error) {
+  body, err := os.ReadFile("/tmp/alby-token")
+
+  if os.IsNotExist(err) {
+    return nil, nil
+  }
+
+  if err != nil {
+    return nil, err
+  }
+
+  var token AlbyToken
+
+  if err := json.Unmarshal(body, &token); err != nil {
+    return nil, err
+  }
+
+  return &token, nil
+}
+
+func RefreshAccessToken(currToken *AlbyToken) (*AlbyToken, error) {
   postUrl := "https://api.getalby.com/oauth/token"
+
+  refToken := os.Getenv("ALBY_REFRESH_TOKEN")
+  if currToken != nil {
+    refToken = currToken.RefreshToken
+  }
 
   form := url.Values{}
   form.Add("client_id", os.Getenv("ALBY_CLIENT_ID"))
   form.Add("client_secret", os.Getenv("ALBY_CLIENT_SECRET"))
   form.Add("grant_type", "refresh_token")
-  form.Add("refresh_token", os.Getenv("ALBY_REFRESH_TOKEN"))
+  form.Add("refresh_token", refToken)
   encoded := form.Encode()
 
   client := &http.Client{}
@@ -41,44 +76,25 @@ func RequestAccessToken() (string, error) {
 
   body, err := ioutil.ReadAll(resp.Body)
   if err != nil {
-    return "", err
+    return nil, err
   }
 
-  var js map[string]interface{}
+  var token AlbyToken
 
-  if err := json.Unmarshal(body, &js); err != nil {
-    return "", err
+  if err := json.Unmarshal(body, &token); err != nil {
+    return nil, err
   }
 
-  if js["error"] != nil {
-    return "", errors.New(js["error_description"].(string))
+  if token.Error != "" {
+    return nil, errors.New(token.ErrorDescription)
   }
 
-  token := js["access_token"].(string)
+  os.WriteFile("/tmp/alby-token", []byte(body), 0644)
 
-  return token, nil
+  return &token, nil
 }
 
-func GetAccessToken() (string, error) {
-  body, err := os.ReadFile("/tmp/alby-access")
-
-  if len(body) == 48 && err == nil {
-    return string(body), nil
-  }
-
-  token, err := RequestAccessToken()
-
-  if err != nil {
-    return "", err
-  }
-
-  os.WriteFile("/tmp/alby-access", []byte(token), 0644)
-
-  return token, nil
-}
-
-
-func Handler(w http.ResponseWriter, r *http.Request) {
+func GetTransactions(token AlbyToken, query map[string]string) (string, error) {
   client := &http.Client{}
   req, err := http.NewRequest("GET", "https://api.getalby.com/invoices/incoming", nil)
 
@@ -87,37 +103,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
     os.Exit(1)
   }
 
-  token, err := GetAccessToken()
-
-  if err != nil {
-    log.Print(err)
-    os.Exit(1)
-  }
-
-  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
   req.Header.Set("User-Agent", "Scoreboard")
 
   q := req.URL.Query()
 
-  if r.FormValue("page") != "" {
-    q.Add("page", r.FormValue("page"))
+  for key, value := range query {
+    q.Add(key, value)
   }
 
-  if r.FormValue("items") != "" {
-    q.Add("items", r.FormValue("items"))
-  }
-
-  if r.FormValue("since") != "" {
-    q.Add("q[since]", r.FormValue("since"))
-  }
-
-  if r.FormValue("created_at_lt") != "" {
-    q.Add("q[created_at_lt]", r.FormValue("created_at_lt"))
-  }
-
-  if r.FormValue("created_at_gt") != "" {
-    q.Add("q[created_at_gt]", r.FormValue("created_at_gt"))
-  }
 
   req.URL.RawQuery = q.Encode()
 
@@ -125,21 +119,81 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
   if err != nil {
     log.Print(err)
-    os.Exit(1)
+    return "", err
   }
 
   body, err := ioutil.ReadAll(resp.Body)
 
   if err != nil {
     log.Print(err)
+    return "", err
+  }
+
+  return string(body), nil
+}
+
+func Handler(w http.ResponseWriter, r *http.Request) {
+
+  query := make(map[string]string)
+
+  if r.FormValue("page") != "" {
+    query["page"] = "page"
+  }
+
+  if r.FormValue("items") != "" {
+    query["items"] = "items"
+  }
+
+  if r.FormValue("since") != "" {
+    query["q[since]"] = "since"
+  }
+
+  if r.FormValue("created_at_lt") != "" {
+    query["q[created_at_lt]"] = "created_at_lt"
+  }
+
+  if r.FormValue("created_at_gt") != "" {
+    query["q[created_at_gt]"] = "created_at_gt"
+  }
+
+  token, err := GetAccessToken()
+  if err != nil {
+    log.Print(err)
     os.Exit(1)
   }
 
-  // sb := string(body)
+  if token == nil {
+    token, err = RefreshAccessToken(nil)
+
+    if err != nil {
+      log.Print(err)
+      os.Exit(1)
+    }
+  }
+
+  body, err := GetTransactions(*token, query)
+  if err != nil {
+    log.Print(err)
+    os.Exit(1)
+  }
+
+  if strings.Contains(body, "invalid access token") {
+    token, err = RefreshAccessToken(token)
+    if err != nil {
+      log.Print(err)
+      os.Exit(1)
+    }
+
+    body, err = GetTransactions(*token, query)
+    if err != nil {
+      log.Print(err)
+      os.Exit(1)
+    }
+  }
 
   var transactions []map[string]interface{}
 
-  if err := json.Unmarshal(body, &transactions); err != nil {
+  if err := json.Unmarshal([]byte(body), &transactions); err != nil {
     log.Print(err)
     os.Exit(1)
   }
