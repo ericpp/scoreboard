@@ -25,10 +25,10 @@ const messageTime = 15
 let lightning
 
 // start at midnight of current date
-let lastBoostAt = new Date()
-lastBoostAt.setHours(0)
-lastBoostAt.setMinutes(0)
-lastBoostAt.setSeconds(0)
+let lastBoostAt = new Date('2024-03-10 00:00:00 -0500')
+// lastBoostAt.setHours(0)
+// lastBoostAt.setMinutes(0)
+// lastBoostAt.setSeconds(0)
 lastBoostAt = Math.floor(lastBoostAt / 1000)
 
 let lastInvoiceId = null
