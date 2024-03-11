@@ -32,15 +32,21 @@ type IncomingBoost struct {
 }
 
 func GetAccessToken() (*AlbyToken, error) {
-  body, err := os.ReadFile("/tmp/alby-token")
+  getUrl := fmt.Sprintf("%s/get/authToken", os.Getenv("KV_REST_API_URL"))
 
-  if os.IsNotExist(err) {
-    return nil, nil
-  }
+  client := &http.Client{}
+  req, _ := http.NewRequest("GET", getUrl, nil)
 
+  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("KV_REST_API_TOKEN")))
+
+  resp, _ := client.Do(req)
+
+  body, err := ioutil.ReadAll(resp.Body)
   if err != nil {
     return nil, err
   }
+
+  log.Print(string(body))
 
   var token AlbyToken
 
@@ -49,6 +55,33 @@ func GetAccessToken() (*AlbyToken, error) {
   }
 
   return &token, nil
+}
+
+func SetAccessToken(token AlbyToken) error {
+  setUrl := fmt.Sprintf("%s/set/authToken", os.Getenv("KV_REST_API_URL"))
+
+  encoded, err := json.Marshal(token)
+
+  if err != nil {
+    log.Print(err)
+    os.Exit(1)
+  }
+
+  client := &http.Client{}
+  req, _ := http.NewRequest("POST", setUrl, strings.NewReader(string(encoded)))
+
+  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("KV_REST_API_TOKEN")))
+
+  resp, _ := client.Do(req)
+
+  body, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+    return err
+  }
+
+  log.Print(string(body))
+
+  return nil
 }
 
 func RefreshAccessToken(currToken *AlbyToken) (*AlbyToken, error) {
@@ -89,7 +122,7 @@ func RefreshAccessToken(currToken *AlbyToken) (*AlbyToken, error) {
     return nil, errors.New(token.ErrorDescription)
   }
 
-  os.WriteFile("/tmp/alby-token", []byte(body), 0644)
+  SetAccessToken(token)
 
   return &token, nil
 }
