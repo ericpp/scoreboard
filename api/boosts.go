@@ -58,8 +58,6 @@ func GetAccessToken() (*AlbyToken, error) {
     return nil, err
   }
 
-  log.Print(result.Result)
-
   var token AlbyToken
 
   if err := json.Unmarshal([]byte(result.Result), &token); err != nil {
@@ -157,10 +155,13 @@ func GetTransactions(token AlbyToken, query map[string]string) (string, error) {
     q.Add(key, value)
   }
 
-
   req.URL.RawQuery = q.Encode()
 
+log.Print(req)
+
   resp, err := client.Do(req)
+
+log.Print(resp)
 
   if err != nil {
     log.Print(err)
@@ -168,6 +169,8 @@ func GetTransactions(token AlbyToken, query map[string]string) (string, error) {
   }
 
   body, err := ioutil.ReadAll(resp.Body)
+
+log.Print(body)
 
   if err != nil {
     log.Print(err)
@@ -237,7 +240,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
   }
 
   var transactions []map[string]interface{}
-log.Print(body)
 
   if err := json.Unmarshal([]byte(body), &transactions); err != nil {
     log.Print(err)
