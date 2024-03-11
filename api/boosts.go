@@ -62,7 +62,7 @@ func GetAccessToken() (*AlbyToken, error) {
 
   var token AlbyToken
 
-  if err := json.Unmarshal(result.Result, &token); err != nil {
+  if err := json.Unmarshal([]byte(result.Result), &token); err != nil {
     return nil, err
   }
 
