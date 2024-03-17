@@ -20,13 +20,13 @@ let boosterScores
 let apps
 let appScores
 
-const messageTime = 15
+const messageTime = 10
 
 let lightning
 
 let lastInvoiceId = null
 
-let pollInterval = 20000
+let pollInterval = 10000
 
 let pew = new Audio('pew.mp3')
 
