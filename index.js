@@ -25,11 +25,6 @@ const messageTime = 15
 let lightning
 
 // start at midnight of current date
-let lastBoostAt = new Date('2024-03-10 00:00:00 -0500')
-// lastBoostAt.setHours(0)
-// lastBoostAt.setMinutes(0)
-// lastBoostAt.setSeconds(0)
-lastBoostAt = Math.floor(lastBoostAt / 1000)
 
 let lastInvoiceId = null
 
@@ -41,11 +36,15 @@ async function getBoosts(old) {
     let page = 1
     let items = 25
     let boosts = []
+	let lastBoostAt = new Date('2024-03-10 00:00:00 -0500')
 
-    // apply podcast filter if specified in page url
+	// apply podcast filter if specified in page url
     let params = (new URL(document.location)).searchParams;
     let podcast = params.get("podcast");
+    let after = params.get("after")
 
+    if (after) lastBoostAt = new Date(after)
+    
     for (let idx = 0; idx < 10; idx++) { // safety for now
         const query = new URLSearchParams()
         query.set("page", page)
@@ -55,7 +54,7 @@ async function getBoosts(old) {
             query.set("since", lastInvoiceId)
         }
         else {
-            query.set("created_at_gt", lastBoostAt)
+            query.set("created_at_gt", Math.floor(lastBoostAt / 1000))
         }
 
         const result = await fetch(`/api/boosts?${query}`)
