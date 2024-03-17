@@ -24,30 +24,26 @@ const messageTime = 15
 
 let lightning
 
-// start at midnight of current date
-let lastBoostAt = new Date('2024-03-10 00:00:00 -0500')
-lastBoostAt = Math.floor(lastBoostAt / 1000)
-
 let lastInvoiceId = null
 
 let pollInterval = 20000
 
 let pew = new Audio('pew.mp3')
 
+// apply podcast filter if specified in page url
+let params = (new URL(document.location)).searchParams
+let podcast = params.get("podcast")
+let after = params.get("after")
+
+if (after) after = new Date(after)
+else after = new Date('2024-03-10 00:00:00 -0500')
+
+let lastBoostAt = Math.floor(after / 1000)
+
 async function getBoosts(old) {
     let page = 1
     let items = 25
     let boosts = []
-
-    // apply podcast filter if specified in page url
-    let params = (new URL(document.location)).searchParams;
-    let podcast = params.get("podcast");
-    let after = params.get("after")
-
-    if (after) {
-	after = new Date(after)
-	lastBoostAt = Math.ceil(lastBoostAt, Math.floor(after / 1000))
-    }
     
     for (let idx = 0; idx < 10; idx++) { // safety for now
         const query = new URLSearchParams()
