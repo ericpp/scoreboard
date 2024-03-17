@@ -163,8 +163,8 @@ function Tracker(boosters, apps, totalSats, lastBoost, newBoosts) {
 
     this.addBoost = (boost, old) => {
         const sats = boost.value_msat_total / 1000
-        this.boosters.add(boost.sender_name, sats)
-        this.apps.add(boost.app_name, sats)
+        this.boosters.add(boost.sender_name || "Unknown", sats)
+        this.apps.add(boost.app_name || "Unknown", sats)
         this.totalSats.add(sats)
         this.lastBoost.add(boost)
 
