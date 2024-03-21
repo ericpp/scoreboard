@@ -224,7 +224,7 @@ function TotalSats() {
         const diff = this.total - this.drawTotal
 
         if (diff > 0) {
-            this.drawTotal += Math.min(diff, Math.floor(random(50, 200)))
+            this.drawTotal += Math.min(diff, Math.floor(random(50, 1000)))
         }
 
         push()
