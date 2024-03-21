@@ -22,7 +22,8 @@ let appScores
 
 const messageTime = 10
 
-let lightning
+const nostrPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
+let nostrPool
 
 let lastInvoiceId = null
 
@@ -40,11 +41,38 @@ else after = new Date('2024-03-10 00:00:00 -0500')
 
 let lastBoostAt = Math.floor(after / 1000)
 
+async function initNostr(old) {
+    const pool = new NostrTools.SimplePool()
+
+    let relays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
+    let isOld = old
+
+    let nostrPool = pool.subscribeMany(relays, [{authors: [nostrPkey]}], {
+        onevent(event) {
+            boost = JSON.parse(event.content)
+
+            if (podcast && podcast != boost.podcast) {
+                return
+            }
+
+            lastBoostAt = boost.creation_date
+            lastInvoiceId = boost.identifier
+
+            tracker.addBoost(boost, isOld)
+
+            setTimeout(() => { isOld = false }, 5000)
+        },
+        oneose() {
+            // h.close()
+        }
+    })
+}
+
 async function getBoosts(old) {
     let page = 1
     let items = 25
     let boosts = []
-    
+
     for (let idx = 0; idx < 10; idx++) { // safety for now
         const query = new URLSearchParams()
         query.set("page", page)
@@ -94,9 +122,8 @@ function setup(){
     boosters = new Scoreboard("- TOP BOOSTERS -", boosterScores)
     apps = new Scoreboard("- TOP APPS -", appScores)
 
-    getBoosts(true).then(() => {
-        setInterval(() => getBoosts(), pollInterval)
-    })
+    getBoosts(true)
+    initNostr()
 
     fontSize = windowHeight / heightToFont
     boxWidth = windowWidth / 1.75
