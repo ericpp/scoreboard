@@ -73,7 +73,7 @@ async function getBoosts(old) {
     let items = 25
     let boosts = []
 
-    for (let idx = 0; idx < 10; idx++) { // safety for now
+    while (true) {
         const query = new URLSearchParams()
         query.set("page", page)
         query.set("items", items)
