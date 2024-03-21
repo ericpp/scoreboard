@@ -122,8 +122,9 @@ function setup(){
     boosters = new Scoreboard("- TOP BOOSTERS -", boosterScores)
     apps = new Scoreboard("- TOP APPS -", appScores)
 
-    getBoosts(true)
-    initNostr()
+    getBoosts(true).then(() => {
+        initNostr()
+    })
 
     fontSize = windowHeight / heightToFont
     boxWidth = windowWidth / 1.75
