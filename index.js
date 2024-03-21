@@ -58,7 +58,7 @@ async function initNostr(old) {
             lastBoostAt = boost.creation_date
             lastInvoiceId = boost.identifier
 
-            tracker.addBoost(boost, isOld)
+            tracker.add(boost, isOld)
 
             setTimeout(() => { isOld = false }, 5000)
         },
@@ -106,7 +106,7 @@ async function getBoosts(old) {
     boosts.forEach(boost => {
         lastBoostAt = boost.creation_date
         lastInvoiceId = boost.identifier
-        tracker.addBoost(boost.boostagram, old)
+        tracker.add(boost, old)
     })
 }
 
@@ -186,11 +186,18 @@ function Tracker(boosters, apps, totalSats, lastBoost, newBoosts) {
     this.apps = apps
     this.totalSats = totalSats
     this.lastBoost = lastBoost
-    this.newBoosts = newBoosts 
+    this.newBoosts = newBoosts
+    this.identifiers = []
 
-    this.addBoost = (boost, old) => {
+    this.add = (invoice, old) => {
+        if (this.identifiers.indexOf(invoice.identifier) !== -1) {
+            return
+        }
+
+        const boost = invoice.boostagram
         const sats = boost.value_msat_total / 1000
         if (isNaN(sats)) return
+
         this.boosters.add(boost.sender_name || "Unknown", sats)
         this.apps.add(boost.app_name || "Unknown", sats)
         this.totalSats.add(sats)
@@ -200,6 +207,8 @@ function Tracker(boosters, apps, totalSats, lastBoost, newBoosts) {
             this.newBoosts.add(boost)
             pew.play()
         }
+
+        this.identifiers.push(invoice.identifier)
     }
 }
 
