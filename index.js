@@ -90,7 +90,7 @@ async function getBoosts(old) {
 
         boosts = [...boosts, ...transactions]
 
-        if (!transactions || transactions.length === 0 || transactions.length < items) {
+        if (!transactions || transactions.length === 0) {
             break
         }
 
