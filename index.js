@@ -55,7 +55,11 @@ async function initNostr(old) {
                 return
             }
 
-            lastBoostAt = boost.creation_date
+            if (lastBoostAt > boost.creation_date) {
+                return;
+            }
+
+            lastBoostAt = Math.max(lastBoostAt, boost.creation_date)
             lastInvoiceId = boost.identifier
 
             tracker.add(boost, isOld)
