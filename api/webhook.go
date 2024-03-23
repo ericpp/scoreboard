@@ -51,7 +51,37 @@ func SaveToDatabase(boost IncomingBoost) error {
 
     var tlv map[string]interface{} = boost.Boostagram.(map[string]interface{})
 
-    insertSql := 
+    podcast := ""
+    if val, ok := tlv["podcast"].(string); ok {
+        podcast = val
+    }
+
+    episode := ""
+    if val, ok := tlv["episode"].(string); ok {
+        episode = val
+    }
+
+    app_name := ""
+    if val, ok := tlv["app_name"].(string); ok {
+        app_name = val
+    }
+
+    sender_name := ""
+    if val, ok := tlv["sender_name"].(string); ok {
+        sender_name = val
+    }
+
+    message := ""
+    if val, ok := tlv["message"].(string); ok {
+        message = val
+    }
+
+    var value_msat_total float64 = 0
+    if val, ok := tlv["value_msat_total"].(float64); ok {
+        value_msat_total = val
+    }
+
+    insertSql :=
     `INSERT INTO invoices
         (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total)
     VALUES
@@ -66,12 +96,12 @@ func SaveToDatabase(boost IncomingBoost) error {
         boost.CreationDate,
         boost.Identifier,
         boost.Value,
-        tlv["podcast"].(string),
-        tlv["episode"].(string),
-        tlv["app_name"].(string),
-        tlv["sender_name"].(string),
-        tlv["message"].(string),
-        tlv["value_msat_total"].(float64),
+        podcast,
+        episode,
+        app_name,
+        sender_name,
+        message,
+        value_msat_total,
     )
 
     if err != nil {
