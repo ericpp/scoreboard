@@ -74,7 +74,7 @@ async function initNostr(old) {
 
 async function getBoosts(old) {
     let page = 1
-    let items = 25
+    let items = 1000
     let boosts = []
 
     while (true) {
@@ -127,7 +127,7 @@ function setup(){
     apps = new Scoreboard("- TOP APPS -", appScores)
 
     getBoosts(true).then(() => {
-        initNostr()
+        initNostr(true)
     })
 
     fontSize = windowHeight / heightToFont
