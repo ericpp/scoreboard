@@ -1,271 +1,158 @@
 package handler
 
 import (
-  "encoding/json"
-  "errors"
-  "fmt"
-  "io/ioutil"
-  "net/http"
-  "net/url"
-  "log"
-  "strings"
-  "os"
+    "database/sql"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "log"
+    "strconv"
+    "strings"
+    "os"
+    _ "github.com/lib/pq"
 )
 
-type KVResult struct {
-  Result           string  `json:"result"`
-}
-
-type AlbyToken struct {
-  AccessToken      string  `json:"access_token"`
-  ExpiresIn        float64 `json:"expires_in"`
-  RefreshToken     string  `json:"refresh_token"`
-  Scope            string  `json:"scope"`
-  TokenType        string  `json:"token_type"`
-  Error            string  `json:"error,omitempty"`
-  ErrorDescription string  `json:"error_description,omitempty"`
-}
-
 type IncomingBoost struct {
-  Amount           float64      `json:"amount"`
-  Boostagram       interface{}  `json:"boostagram"`
-  CreatedAt        string       `json:"created_at"`
-  CreationDate     float64      `json:"creation_date"`
-  Identifier       string       `json:"identifier"`
-  Value            float64      `json:"value"`
+    Amount           float64      `json:"amount"`
+    Boostagram       interface{}  `json:"boostagram"`
+    CreatedAt        string       `json:"created_at"`
+    CreationDate     float64      `json:"creation_date"`
+    Identifier       string       `json:"identifier"`
+    Value            float64      `json:"value"`
 }
 
-func GetAccessToken() (*AlbyToken, error) {
-  getUrl := fmt.Sprintf("%s/get/authToken", os.Getenv("KV_REST_API_URL"))
+func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
+    // open database
+    db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
 
-  client := &http.Client{}
-  req, _ := http.NewRequest("GET", getUrl, nil)
+    if err != nil {
+        return nil, err
+    }
 
-  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("KV_REST_API_TOKEN")))
+    // close database
+    defer db.Close()
 
-  resp, _ := client.Do(req)
+    // check db
+    if err = db.Ping(); err != nil {
+        return nil, err
+    }
 
-  body, err := ioutil.ReadAll(resp.Body)
-  if err != nil {
-    return nil, err
-  }
+    var where []string
+    var params []any
 
-  var result KVResult
+    items := 25
+    offset := 0
 
-  if err := json.Unmarshal(body, &result); err != nil {
-    log.Print(body)
-    return nil, err
-  }
+    if val, ok := query["q[created_at_lt]"]; ok {
+        params = append(params, val)
+        where = append(where, fmt.Sprintf(`creation_date <= $%d`, len(params)))
+    }
 
-  var token AlbyToken
+    if val, ok := query["q[created_at_gt]"]; ok {
+        params = append(params, val)
+        where = append(where, fmt.Sprintf(`creation_date >= $%d`, len(params)))
+    }
 
-  if err := json.Unmarshal([]byte(result.Result), &token); err != nil {
-    log.Print(body)
-    return nil, err
-  }
+    if val, ok := query["q[since]"]; ok {
+        params = append(params, val)
+        where = append(where, fmt.Sprintf(`creation_date >= (SELECT MAX(creation_date) FROM invoices WHERE identifier = $%d)`, len(params)))
 
-  return &token, nil
-}
+        params = append(params, val)
+        where = append(where, fmt.Sprintf(`identifier <> $%d`, len(params)))
+    }
 
-func SetAccessToken(token AlbyToken) error {
-  setUrl := fmt.Sprintf("%s/set/authToken", os.Getenv("KV_REST_API_URL"))
+    if val, ok := query["items"]; ok {
+        num, err := strconv.Atoi(val)
+        if err != nil {
+            return nil, err
+        }
 
-  encoded, err := json.Marshal(token)
+        items = num
+    }
 
-  if err != nil {
-    log.Print(err)
-    os.Exit(1)
-  }
+    if val, ok := query["page"]; ok {
+        pg, err := strconv.Atoi(val)
+        if err != nil {
+            return nil, err
+        }
 
-  client := &http.Client{}
-  req, _ := http.NewRequest("POST", setUrl, strings.NewReader(string(encoded)))
+        offset = (pg - 1) * items
+    }
 
-  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("KV_REST_API_TOKEN")))
+    if len(where) == 0 {
+        where = append(where, "1=1")
+    }
 
-  resp, _ := client.Do(req)
+    sql := fmt.Sprintf(`SELECT amount, boostagram, created_at, creation_date, identifier, value FROM invoices WHERE %s ORDER BY creation_date DESC LIMIT %d OFFSET %d`, strings.Join(where, " AND "), items, offset)
 
-  body, err := ioutil.ReadAll(resp.Body)
-  if err != nil {
-    return err
-  }
+    rows, err := db.Query(sql, params...)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-  log.Print(string(body))
+    boosts := []IncomingBoost{}
 
-  return nil
-}
+    // Loop through rows, using Scan to assign column data to struct fields.
+    for rows.Next() {
+        var item IncomingBoost
+        var boostagram string
 
-func RefreshAccessToken(currToken *AlbyToken) (*AlbyToken, error) {
-  postUrl := "https://api.getalby.com/oauth/token"
+        if err := rows.Scan(&item.Amount, &boostagram, &item.CreatedAt, &item.CreationDate, &item.Identifier, &item.Value); err != nil {
+            return nil, err
+        }
 
-  refToken := os.Getenv("ALBY_REFRESH_TOKEN")
-  if currToken != nil {
-    refToken = currToken.RefreshToken
-  }
+        if err := json.Unmarshal([]byte(boostagram), &item.Boostagram); err != nil {
+            return nil, err
+        }
 
-  form := url.Values{}
-  form.Add("client_id", os.Getenv("ALBY_CLIENT_ID"))
-  form.Add("client_secret", os.Getenv("ALBY_CLIENT_SECRET"))
-  form.Add("grant_type", "refresh_token")
-  form.Add("refresh_token", refToken)
-  encoded := form.Encode()
+        boosts = append(boosts, item)
+    }
 
-  client := &http.Client{}
-  req, _ := http.NewRequest("POST", postUrl, strings.NewReader(encoded))
+    if err = rows.Err(); err != nil {
+        return nil, err
+    }
 
-  req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-  req.Header.Set("User-Agent", "Scoreboard")
-
-  resp, _ := client.Do(req)
-
-  body, err := ioutil.ReadAll(resp.Body)
-  if err != nil {
-    return nil, err
-  }
-
-  var token AlbyToken
-
-  if err := json.Unmarshal(body, &token); err != nil {
-    log.Print(body)
-    return nil, err
-  }
-
-  if token.Error != "" {
-    return nil, errors.New(token.ErrorDescription)
-  }
-
-  SetAccessToken(token)
-
-  return &token, nil
-}
-
-func GetTransactions(token AlbyToken, query map[string]string) (string, error) {
-  client := &http.Client{}
-  req, err := http.NewRequest("GET", "https://api.getalby.com/invoices/incoming", nil)
-
-  if err != nil {
-    log.Print(err)
-    os.Exit(1)
-  }
-
-  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
-  req.Header.Set("User-Agent", "Scoreboard")
-
-  q := req.URL.Query()
-
-  for key, value := range query {
-    q.Add(key, value)
-  }
-
-  req.URL.RawQuery = q.Encode()
-
-  resp, err := client.Do(req)
-
-  if err != nil {
-    log.Print(err)
-    return "", err
-  }
-
-  body, err := ioutil.ReadAll(resp.Body)
-
-  if err != nil {
-    log.Print(err)
-    return "", err
-  }
-
-  return string(body), nil
+    return boosts, nil
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 
-  query := make(map[string]string)
+    query := make(map[string]string)
 
-  if r.FormValue("page") != "" {
-    query["page"] = r.FormValue("page")
-  }
+    if r.FormValue("page") != "" {
+        query["page"] = r.FormValue("page")
+    }
 
-  if r.FormValue("items") != "" {
-    query["items"] = r.FormValue("items")
-  }
+    if r.FormValue("items") != "" {
+        query["items"] = r.FormValue("items")
+    }
 
-  if r.FormValue("since") != "" {
-    query["q[since]"] = r.FormValue("since")
-  }
+    if r.FormValue("since") != "" {
+        query["q[since]"] = r.FormValue("since")
+    }
 
-  if r.FormValue("created_at_lt") != "" {
-    query["q[created_at_lt]"] = r.FormValue("created_at_lt")
-  }
+    if r.FormValue("created_at_lt") != "" {
+        query["q[created_at_lt]"] = r.FormValue("created_at_lt")
+    }
 
-  if r.FormValue("created_at_gt") != "" {
-    query["q[created_at_gt]"] = r.FormValue("created_at_gt")
-  }
+    if r.FormValue("created_at_gt") != "" {
+        query["q[created_at_gt]"] = r.FormValue("created_at_gt")
+    }
 
-  token, err := GetAccessToken()
-  if err != nil {
-    log.Print(err)
-    os.Exit(1)
-  }
+    boosts, err := GetBoosts(query)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-  if token == nil {
-    token, err = RefreshAccessToken(nil)
+    w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+    js, err := json.Marshal(boosts);
 
     if err != nil {
-      log.Print(err)
-      os.Exit(1)
-    }
-  }
-
-  body, err := GetTransactions(*token, query)
-  if err != nil {
-    log.Print(err)
-    os.Exit(1)
-  }
-
-  if strings.Contains(body, "expired access token") || strings.Contains(body, "invalid access token") {
-    token, err = RefreshAccessToken(token)
-    if err != nil {
-      log.Print(err)
-      os.Exit(1)
+        log.Print(err)
+        os.Exit(1)
     }
 
-    body, err = GetTransactions(*token, query)
-    if err != nil {
-      log.Print(err)
-      os.Exit(1)
-    }
-  }
-
-  var transactions []map[string]interface{}
-
-  if err := json.Unmarshal([]byte(body), &transactions); err != nil {
-    log.Print(err)
-    log.Print(body)
-    os.Exit(1)
-  }
-
-  boosts := []IncomingBoost{}
-
-  for _, transaction := range transactions {
-    if transaction["boostagram"] != nil {
-      boosts = append(boosts, IncomingBoost {
-        Amount: transaction["amount"].(float64),
-        Boostagram: transaction["boostagram"],
-        CreatedAt: transaction["created_at"].(string),
-        CreationDate: transaction["creation_date"].(float64),
-        Identifier: transaction["identifier"].(string),
-        Value: transaction["value"].(float64),
-      })
-    }
-  }
-
-  w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-  js, err := json.Marshal(boosts);
-
-  if err != nil {
-    log.Print(err)
-    os.Exit(1)
-  }
-
-  fmt.Fprint(w, string(js))
-
+    fmt.Fprint(w, string(js))
 }
