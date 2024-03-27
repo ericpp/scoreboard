@@ -96,7 +96,7 @@ function draw(){
     textAlign(CENTER)
 
     posY = boxOffsetHeight
-    posY = topCounters.draw(0, posY, windowWidth)
+    posY = topCounters.draw(boxOffsetWidth, posY, boxWidth)
 
     if (newPayments.isDrawable()) {
         newPayments.draw(0, posY, windowWidth)
@@ -387,10 +387,12 @@ function TopCounters() {
     }
 
     this.draw = (x, y, width) => {
-        this.boostCounter.draw(x - 300, y, width)
-        this.zapCounter.draw(x + 300, y, width)
-        let topY = this.totalCounter.draw(x, y, width)
-        return topY
+        const indent = (width / 3) + 100
+
+        this.boostCounter.draw(x - indent, y, width)
+        this.zapCounter.draw(x + indent, y, width)
+
+        return this.totalCounter.draw(x, y, width)
     }
 }
 
