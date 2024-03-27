@@ -566,7 +566,7 @@ function Scoreboard(title, scores) {
         textAlign(LEFT)
         fill(0, 255, 255)
         stroke(0, 60, 60)
-        text("SCORE", x + width/2 - 300, y, width)
+        text("SCORE", x + width/3, y, width)
 
         textAlign(RIGHT)
         text("NAME", x, y, width)
@@ -628,7 +628,7 @@ function TopScore(position, name, sats) {
 
         textAlign(LEFT)
         text(place, x, y, width)
-        text(this.sats.toLocaleString(), x + width/2 - 300, y, width)
+        text(this.sats.toLocaleString(), x + width/3, y, width)
 
         textAlign(RIGHT)
         text(this.name.toUpperCase(), x, y, width)
