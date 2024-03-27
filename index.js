@@ -45,7 +45,9 @@ let after = params.get("after")
 if (after) after = new Date(after)
 else after = new Date('2024-03-10 00:00:00 -0500')
 
-let lastPaymentAt = Math.floor(after / 1000)
+after = Math.floor(after / 1000)
+
+let lastBoostAt = after
 
 function setup(){
     stars = new Stars(numstars)
@@ -132,7 +134,7 @@ async function getBoosts(old) {
             query.set("since", lastInvoiceId)
         }
         else {
-            query.set("created_at_gt", lastPaymentAt)
+            query.set("created_at_gt", lastBoostAt)
         }
 
         const result = await fetch(`/api/boosts?${query}`)
@@ -154,7 +156,7 @@ async function getBoosts(old) {
     boosts.sort((a, b) => a.creation_date - b.creation_date)
 
     boosts.forEach(invoice => {
-        lastPaymentAt = invoice.creation_date
+        lastBoostAt = invoice.creation_date
         lastInvoiceId = invoice.identifier
 
         tracker.addBoost(invoice, true)
@@ -174,7 +176,7 @@ async function initNostr(old) {
                 return
             }
 
-            if (lastPaymentAt > invoice.creation_date) {
+            if (lastBoostAt > invoice.creation_date) {
                 return;
             }
 
@@ -187,7 +189,7 @@ async function initNostr(old) {
 
     nostrPool.subscribeMany(nostrRelays, [{'#a': [nostrZappedEvent], 'kinds': [9735]}], {
         async onevent(event) {
-            if (lastPaymentAt > event.created_at) {
+            if (after > event.created_at) {
                 return;
             }
 
@@ -212,11 +214,14 @@ async function initNostr(old) {
         })
 
         for (let pubkey of pubkeys) {
-            let resolve = nostrNameQueue[pubkey]
+            let resolvers = nostrNameQueue[pubkey]
 
-            if (resolve) {
+            if (resolvers) {
                 delete nostrNameQueue[pubkey]
-                resolve(nostrNames[pubkey] || null)
+
+                resolvers.forEach(resolve => {
+                    resolve(nostrNames[pubkey] || null)
+                })
             }
         }
 
@@ -231,7 +236,11 @@ function getNostrName(pubkey) {
             resolve(nostrNames[pubkey])
         }
         else {
-            nostrNameQueue[pubkey] = resolve
+            if (!nostrNameQueue[pubkey]) {
+                nostrNameQueue[pubkey] = []
+            }
+
+            nostrNameQueue[pubkey].push(resolve)
         }
     })
 }
