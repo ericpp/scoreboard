@@ -13,17 +13,23 @@ let stars
 let numstars = 50
 
 let tracker
-let newBoosts
-let boosters
-let boosterScores
+let newPayments
+let producers
+let producerScores
 
 let apps
 let appScores
 
 const messageTime = 10
 
-const nostrPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
+const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
+const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
+const nostrZappedEvent = "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1703119221"
+
 let nostrPool
+
+const nostrNames = {};
+const nostrNameQueue = {};
 
 let lastInvoiceId = null
 
@@ -39,91 +45,18 @@ let after = params.get("after")
 if (after) after = new Date(after)
 else after = new Date('2024-03-10 00:00:00 -0500')
 
-let lastBoostAt = Math.floor(after / 1000)
-
-async function initNostr(old) {
-    const pool = new NostrTools.SimplePool()
-
-    let relays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
-    let isOld = old
-
-    let nostrPool = pool.subscribeMany(relays, [{authors: [nostrPkey]}], {
-        onevent(event) {
-            boost = JSON.parse(event.content)
-
-            if (podcast && podcast != boost.podcast) {
-                return
-            }
-
-            if (lastBoostAt > boost.creation_date) {
-                return;
-            }
-
-            lastBoostAt = Math.max(lastBoostAt, boost.creation_date)
-            lastInvoiceId = boost.identifier
-
-            tracker.add(boost, isOld)
-
-            setTimeout(() => { isOld = false }, 5000)
-        },
-        oneose() {
-            // h.close()
-        }
-    })
-}
-
-async function getBoosts(old) {
-    let page = 1
-    let items = 1000
-    let boosts = []
-
-    while (true) {
-        const query = new URLSearchParams()
-        query.set("page", page)
-        query.set("items", items)
-
-        if (lastInvoiceId) {
-            query.set("since", lastInvoiceId)
-        }
-        else {
-            query.set("created_at_gt", lastBoostAt)
-        }
-
-        const result = await fetch(`/api/boosts?${query}`)
-        const transactions = await result.json()
-
-        boosts = [...boosts, ...transactions]
-
-        if (!transactions || transactions.length === 0) {
-            break
-        }
-
-        page++
-    }
-
-    if (podcast) {
-        boosts = boosts.filter(x => x.boostagram.podcast == podcast)
-    }
-
-    boosts.sort((a, b) => a.creation_date - b.creation_date)
-
-    boosts.forEach(boost => {
-        lastBoostAt = boost.creation_date
-        lastInvoiceId = boost.identifier
-        tracker.add(boost, old)
-    })
-}
+let lastPaymentAt = Math.floor(after / 1000)
 
 function setup(){
     stars = new Stars(numstars)
-    boosterScores = new Scores(5)
+    producerScores = new Scores(5)
     appScores = new Scores(5)
-    newBoosts = new NewBoosts()
-    lastBoost = new LastBoost()
-    totalSats = new TotalSats()
+    newPayments = new NewPayments()
+    lastPayment = new LastPayment()
+    topCounters = new TopCounters()
 
-    tracker = new Tracker(boosterScores, appScores, totalSats, lastBoost, newBoosts)
-    boosters = new Scoreboard("- TOP BOOSTERS -", boosterScores)
+    tracker = new Tracker(producerScores, appScores, topCounters, lastPayment, newPayments)
+    producers = new Scoreboard("- TOP PRODUCERS -", producerScores)
     apps = new Scoreboard("- TOP APPS -", appScores)
 
     getBoosts(true).then(() => {
@@ -163,14 +96,14 @@ function draw(){
     textAlign(CENTER)
 
     posY = boxOffsetHeight
-    posY = totalSats.draw(0, posY, windowWidth)
+    posY = topCounters.draw(0, posY, windowWidth)
 
-    if (newBoosts.isDrawable()) {
-        newBoosts.draw(0, posY, windowWidth)
+    if (newPayments.isDrawable()) {
+        newPayments.draw(0, posY, windowWidth)
     }
     else {
-        posY = lastBoost.draw(0, posY, windowWidth)
-        posY = boosters.draw(boxOffsetWidth, posY, boxWidth)
+        posY = lastPayment.draw(0, posY, windowWidth)
+        posY = producers.draw(boxOffsetWidth, posY, boxWidth)
         posY = apps.draw(boxOffsetWidth, posY, boxWidth)
     }
 }
@@ -185,50 +118,235 @@ function boxedText(str, x, y, width, height) {
     pop()
 }
 
-function Tracker(boosters, apps, totalSats, lastBoost, newBoosts) {
-    this.boosters = boosters
+async function getBoosts(old) {
+    let page = 1
+    let items = 1000
+    let boosts = []
+
+    while (true) {
+        const query = new URLSearchParams()
+        query.set("page", page)
+        query.set("items", items)
+
+        if (lastInvoiceId) {
+            query.set("since", lastInvoiceId)
+        }
+        else {
+            query.set("created_at_gt", lastPaymentAt)
+        }
+
+        const result = await fetch(`/api/boosts?${query}`)
+        const transactions = await result.json()
+
+        boosts = [...boosts, ...transactions]
+
+        if (!transactions || transactions.length === 0) {
+            break
+        }
+
+        page++
+    }
+
+    if (podcast) {
+        boosts = boosts.filter(x => x.boostagram.podcast == podcast)
+    }
+
+    boosts.sort((a, b) => a.creation_date - b.creation_date)
+
+    boosts.forEach(invoice => {
+        lastPaymentAt = invoice.creation_date
+        lastInvoiceId = invoice.identifier
+
+        tracker.addBoost(invoice, isOld)
+    })
+}
+
+async function initNostr(old) {
+    nostrPool = new NostrTools.SimplePool()
+
+    let isOld = old
+
+    nostrPool.subscribeMany(nostrRelays, [{authors: [nostrBoostPkey]}], {
+        onevent(event) {
+            invoice = JSON.parse(event.content)
+
+            if (podcast && podcast != invoice.podcast) {
+                return
+            }
+
+            if (lastPaymentAt > invoice.creation_date) {
+                return;
+            }
+
+            tracker.addBoost(invoice, isOld)
+        },
+        oneose() {
+            // h.close()
+        }
+    })
+
+    nostrPool.subscribeMany(nostrRelays, [{'#a': [nostrZappedEvent], 'kinds': [9735]}], {
+        async onevent(event) {
+            if (lastPaymentAt > event.created_at) {
+                return;
+            }
+
+            await tracker.addZap(event, isOld)
+        },
+        oneose() {
+            // h.close()
+        }
+    })
+
+    setInterval(async () => {
+        if (!nostrNameQueue) return
+
+        let pubkeys = Object.keys(nostrNameQueue)
+        if (pubkeys.length === 0) return
+
+        let profiles = await nostrPool.querySync(nostrRelays, {authors: pubkeys, kinds: [0]})
+
+        profiles.forEach(event => {
+            const profile = JSON.parse(event.content)
+            nostrNames[event.pubkey] = profile.display_name || profile.name
+        })
+
+        for (let pubkey of pubkeys) {
+            let resolve = nostrNameQueue[pubkey]
+
+            if (resolve) {
+                delete nostrNameQueue[pubkey]
+                resolve(nostrNames[pubkey] || null)
+            }
+        }
+
+    }, 1000)
+
+    setTimeout(() => { isOld = false }, 5000)
+}
+
+function getNostrName(pubkey) {
+    return new Promise((resolve, reject) => {
+        if (nostrNames[pubkey]) {
+            resolve(nostrNames[pubkey])
+        }
+        else {
+            nostrNameQueue[pubkey] = resolve
+        }
+    })
+}
+
+function getMsatsFromBolt11(bolt11) {
+    const multipliers = {
+        m: 100000000,
+        u: 100000,
+        n: 100,
+        p: 0.1,
+    }
+
+    // msat amount encoded in the first part (e.g. lnbc100n -> 100n -> 100 * 100 = 100,000)
+    let matches = bolt11.match(/^ln\w+?(\d+)([a-zA-Z]?)/)
+
+    if (!matches) {
+        return null // no match
+    }
+
+    // calculate the msats from the number and multiplier
+    return parseInt(matches[1]) * multipliers[matches[2]]
+}
+
+
+function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
+    this.producers = producers
     this.apps = apps
-    this.totalSats = totalSats
-    this.lastBoost = lastBoost
-    this.newBoosts = newBoosts
+    this.topCounters = topCounters
+    this.lastPayment = lastPayment
+    this.newPayments = newPayments
     this.identifiers = []
 
-    this.add = (invoice, old) => {
-        if (this.identifiers.indexOf(invoice.identifier) !== -1) {
+    this.add = (payment, old) => {
+        if (!payment.sats || isNaN(payment.sats)) {
+            return;
+        }
+
+        if (this.identifiers.indexOf(payment.identifier) !== -1) {
             return
         }
 
-        const boost = invoice.boostagram
-        const sats = boost.value_msat_total / 1000
-        if (isNaN(sats)) return
-
-        this.boosters.add(boost.sender_name || "Unknown", sats)
-        this.apps.add(boost.app_name || "Unknown", sats)
-        this.totalSats.add(sats)
-        this.lastBoost.add(boost)
+        this.producers.add(payment.sender_name || "Unknown", payment.sats)
+        this.apps.add(payment.app_name || "Unknown", payment.sats)
+        this.lastPayment.add(payment)
+        this.topCounters.add(payment)
 
         if (!old) {
-            this.newBoosts.add(boost)
+            this.newPayments.add(payment)
             pew.play()
         }
 
-        this.identifiers.push(invoice.identifier)
+        this.identifiers.push(payment.identifier)
     }
+
+    this.addBoost = async (invoice, old) => {
+        const boost = invoice.boostagram
+
+        this.add({
+            type: 'boost',
+            identifier: invoice.identifier,
+            creation_date: invoice.creation_date,
+            sender_name: boost.sender_name || 'Anonymous',
+            app_name: boost.app_name || 'Unknown',
+            sats: Math.floor(boost.value_msat_total / 1000),
+            message: boost.message,
+        }, old)
+    }
+
+    this.addZap = async (zap, old) => {
+        const tags = zap.tags.reduce((result, tag) => {
+            const [name, value] = tag
+            if (!result[name]) result[name] = []
+            result[name].push(value)
+            return result
+        }, {})
+
+        // original zap request is encoded as a tag in the zap receipt
+        const zaprequest = JSON.parse(tags['description'][0])
+
+        // msats can be calculated from bolt11 request
+        const value_msat_total = getMsatsFromBolt11(tags['bolt11'][0])
+
+        // batch look up names based on original zap request pubkey
+        const sender_name = await getNostrName(zaprequest.pubkey)
+
+        // push
+        this.add({
+            type: 'zap',
+            identifier: zap.id,
+            creation_date: zap.created_at,
+            sender_name: sender_name || 'Anonymous',
+            app_name: 'Nostr',
+            sats: Math.floor(value_msat_total / 1000),
+            message: zap.content,
+        }, old)
+    }
+
 }
 
-function TotalSats() {
+function SatCounter(title) {
+    this.title = title
     this.total = 0
     this.drawTotal = 0
+    this.increment = 0
 
     this.add = (sats) => {
         this.total += sats
+        this.increment = Math.floor(this.total / 240)
     }
 
     this.draw = (x, y, width) => {
         const diff = this.total - this.drawTotal
 
         if (diff > 0) {
-            this.drawTotal += Math.min(diff, Math.floor(random(50, 1000)))
+            this.drawTotal += Math.min(diff, Math.floor(random(50, this.increment)))
         }
 
         push()
@@ -238,7 +356,7 @@ function TotalSats() {
         textAlign(CENTER)
 
         y += textSize()
-        text("TOTAL SATS", x, y, width)
+        text(this.title, x, y, width)
         y += textSize()
 
         fill(255, 255, 255)
@@ -252,7 +370,31 @@ function TotalSats() {
     }
 }
 
-function NewBoosts() {
+function TopCounters() {
+    this.boostCounter = new SatCounter('BOOSTS')
+    this.zapCounter = new SatCounter('ZAPS')
+    this.totalCounter = new SatCounter('TOTAL SATS')
+
+    this.add = (payment) => {
+        if (payment.type == 'boost') {
+            this.boostCounter.add(payment.sats)
+        }
+        else if (payment.type == 'zap') {
+            this.zapCounter.add(payment.sats)
+        }
+
+        this.totalCounter.add(payment.sats)
+    }
+
+    this.draw = (x, y, width) => {
+        this.boostCounter.draw(x - 300, y, width)
+        this.zapCounter.draw(x + 300, y, width)
+        let topY = this.totalCounter.draw(x, y, width)
+        return topY
+    }
+}
+
+function NewPayments() {
     this.pending = []
     this.current = null
     this.updated = 0
@@ -284,13 +426,17 @@ function NewBoosts() {
 
         textAlign(CENTER)
 
-        let sats = (this.current.value_msat_total / 1000).toLocaleString()
-        let str = `${this.current.sender_name} BOOSTED ${sats.toLocaleString()} SATS FROM ${this.current.app_name}`.toUpperCase()
+        const sender = this.current.sender_name
+        const sats = this.current.sats.toLocaleString()
+        const boostzap = (this.current.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
+        const app = (this.current.type == 'boost' ? ` FROM ${this.current.app_name}` : '')
+
+        const info = `${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()
 
         if (this.current.message) {
             fill(0, 255, 255)
             stroke(0, 60, 60)
-            boxedText(str, x, y, width, 2 * textSize())
+            boxedText(info, x, y, width, 2 * textSize())
             y += 3 * textSize()
 
             fill(255, 255, 255)
@@ -301,7 +447,7 @@ function NewBoosts() {
         else {
             fill(255, 255, 255)
             stroke(60, 60, 60)
-            boxedText(str, x, y, width, windowHeight - y - 200)
+            boxedText(info, x, y, width, windowHeight - y - 200)
         }
 
         pop()
@@ -309,15 +455,19 @@ function NewBoosts() {
     }
 }
 
-function LastBoost() {
-    this.boost = null
+function LastPayment() {
+    this.current = null
 
     this.add = (boost) => {
-        this.boost = boost
+        if (this.current && this.current.creation_date > boost.creation_date) {
+            return
+        }
+
+        this.current = boost
     }
 
     this.draw = (x, y, width) => {
-        if (!this.boost) {
+        if (!this.current) {
             return y
         }
 
@@ -327,18 +477,22 @@ function LastBoost() {
         stroke(0, 60, 60)
         textAlign(CENTER)
 
-        let sats = (this.boost.value_msat_total / 1000).toLocaleString()
-        let str = `${this.boost.sender_name} BOOSTED ${sats} SATS FROM ${this.boost.app_name}`.toUpperCase()
+        const sender = this.current.sender_name
+        const sats = this.current.sats.toLocaleString()
+        const boostzap = (this.current.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
+        const app = (this.current.type == 'boost' ? ` FROM ${this.current.app_name}` : '')
 
-        if (this.boost.message) {
-            boxedText(str, x, y, width, textSize())
+        const info = `${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()
+
+        if (this.current.message) {
+            boxedText(info, x, y, width, textSize())
             y += 1.25 * textSize()
 
-            boxedText(this.boost.message.toUpperCase(), x, y, width, 2 * textSize())
+            boxedText(this.current.message.toUpperCase(), x, y, width, 2 * textSize())
             y += 3 * textSize()
         }
         else {
-            boxedText(str, x, y, width, 2 * textSize())
+            boxedText(info, x, y, width, 2 * textSize())
             y += 3 * textSize()
         }
 
@@ -379,58 +533,6 @@ function Scores(num) {
 
     this.getTopScores = () => {
         return this.topScores.filter(x => x.name)
-    }
-}
-
-function Stars(numstars) {
-    this.stars = []
-    this.numstars = numstars
-
-    this.reset = () => {
-        this.stars = []
-    }
-
-    this.draw = () => {
-        for (let idx = 0; this.stars.length < this.numstars; idx++) {
-            this.stars.push(new Star())
-        }
-
-        for (let idx = 0; idx < this.stars.length; idx++){
-            this.stars[idx].draw()
-
-            if (this.stars[idx].isOffScreen()){
-                this.stars[idx] = new Star(0)
-            }
-        }
-    }
-}
-
-function Star(top){
-    // this.pos = createVector(random(width), top === undefined ? random(height) : top)
-    this.pos = createVector(random(width), top === 0 ? 0 : random(height))
-    this.vel = createVector(0, 2)
-    this.pick = random(360)
-    this.alpha = Math.round(random(4)) / 4
-    this.size = 3
-
-    this.draw = () => {
-        this.pos.add(this.vel)
-
-        push()
-        strokeWeight(0)
-        colorMode(HSB)
-
-        this.pick = Math.floor((this.pick + 1) % 360)
-
-        fill(this.pick, 100, 100, this.alpha)
-        rect(this.pos.x, this.pos.y, this.size, this.size)
-
-        colorMode(RGB)
-        pop()
-    }
-    
-    this.isOffScreen = function(){
-        return (this.pos.y >= height)
     }
 }
 
@@ -525,5 +627,57 @@ function TopScore(position, name, sats) {
         pop()
 
         return y
+    }
+}
+
+function Stars(numstars) {
+    this.stars = []
+    this.numstars = numstars
+
+    this.reset = () => {
+        this.stars = []
+    }
+
+    this.draw = () => {
+        for (let idx = 0; this.stars.length < this.numstars; idx++) {
+            this.stars.push(new Star())
+        }
+
+        for (let idx = 0; idx < this.stars.length; idx++){
+            this.stars[idx].draw()
+
+            if (this.stars[idx].isOffScreen()){
+                this.stars[idx] = new Star(0)
+            }
+        }
+    }
+}
+
+function Star(top){
+    // this.pos = createVector(random(width), top === undefined ? random(height) : top)
+    this.pos = createVector(random(width), top === 0 ? 0 : random(height))
+    this.vel = createVector(0, 2)
+    this.pick = random(360)
+    this.alpha = Math.round(random(4)) / 4
+    this.size = 3
+
+    this.draw = () => {
+        this.pos.add(this.vel)
+
+        push()
+        strokeWeight(0)
+        colorMode(HSB)
+
+        this.pick = Math.floor((this.pick + 1) % 360)
+
+        fill(this.pick, 100, 100, this.alpha)
+        rect(this.pos.x, this.pos.y, this.size, this.size)
+
+        colorMode(RGB)
+        pop()
+    }
+
+    this.isOffScreen = function(){
+        return (this.pos.y >= height)
     }
 }
