@@ -157,7 +157,7 @@ async function getBoosts(old) {
         lastPaymentAt = invoice.creation_date
         lastInvoiceId = invoice.identifier
 
-        tracker.addBoost(invoice, isOld)
+        tracker.addBoost(invoice, true)
     })
 }
 
