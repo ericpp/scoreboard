@@ -145,7 +145,7 @@ async function getBoosts(old) {
         }
 
         lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
-        lastInvoiceId = boosts.filter(x => x.creation_date == lastBoostAt).shift() || lastInvoiceId
+        lastInvoiceId = boosts.filter(x => x.creation_date == lastBoostAt).map(x => x.identifier).shift() || lastInvoiceId
 console.log(`lastBoostAt ${lastBoostAt}, lastInvoiceId ${lastInvoiceId}`)
         if (podcast) {
             boosts = boosts.filter(x => x.boostagram.podcast == podcast)
