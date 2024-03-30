@@ -138,29 +138,25 @@ async function getBoosts(old) {
         }
 
         const result = await fetch(`/api/boosts?${query}`)
-        const transactions = await result.json()
+        const boosts = await result.json()
 
-        boosts = [...boosts, ...transactions]
-
-        if (!transactions || transactions.length === 0) {
+        if (!boosts || boosts.length === 0) {
             break
         }
 
+        const lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
+        const lastInvoiceId = boosts.filter(x => x.creation_date == lastBoostAt).shift() || lastInvoiceId
+console.log(`lastBoostAt ${lastBoostAt}, lastInvoiceId ${lastInvoiceId}`)
+        if (podcast) {
+            boosts = boosts.filter(x => x.boostagram.podcast == podcast)
+        }
+
+        boosts.forEach(invoice => {
+            tracker.addBoost(invoice, true)
+        })
+
         page++
     }
-
-    if (podcast) {
-        boosts = boosts.filter(x => x.boostagram.podcast == podcast)
-    }
-
-    boosts.sort((a, b) => a.creation_date - b.creation_date)
-
-    boosts.forEach(invoice => {
-        lastBoostAt = invoice.creation_date
-        lastInvoiceId = invoice.identifier
-
-        tracker.addBoost(invoice, true)
-    })
 }
 
 async function initNostr(old) {
@@ -691,4 +687,30 @@ function Star(top){
     this.isOffScreen = function(){
         return (this.pos.y >= height)
     }
+}
+
+function bech32_to_hex(str) {
+    let grammar = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+    let idx = 0;
+    let hex = "";
+
+    // remove prefix
+    str = str.replace(/^\w+1(.+)$/, '$1')
+
+    // remove checksum (to-do later)
+    str = str.replace(/^(.+?).{6}$/, '$1')
+
+    // convert to hex
+    while (idx < str.length) {
+        let word = 0;
+console.log(idx, str[idx], str[idx+1], str[idx+2], str[idx+3])
+        word += grammar.indexOf(str[idx++]) << 15
+        word += grammar.indexOf(str[idx++]) << 10
+        word += grammar.indexOf(str[idx++]) << 5
+        word += grammar.indexOf(str[idx++])
+        hex += word.toString(16);
+console.log(word, word.toString(16), hex)
+    }
+
+    return hex;
 }
