@@ -487,7 +487,7 @@ function LastPayment() {
         const sender = this.current.sender_name
         const sats = this.current.sats.toLocaleString()
         const boostzap = (this.current.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
-        const app = (this.current.type == 'boost' ? ` FROM ${this.current.app_name}` : '')
+        const app = (this.current.type == 'boost' ? `FROM ${this.current.app_name}` : '')
 
         const info = `${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()
 
