@@ -296,6 +296,7 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
 
         this.add({
             type: 'boost',
+            action: boost.action || 'unknown',
             identifier: invoice.identifier,
             creation_date: invoice.creation_date,
             sender_name: boost.sender_name || 'Anonymous',
@@ -325,6 +326,7 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
         // push
         this.add({
             type: 'zap',
+            action: 'zap',
             identifier: zap.id,
             creation_date: zap.created_at,
             sender_name: sender_name || 'Anonymous',
@@ -407,6 +409,10 @@ function NewPayments() {
     this.updated = 0
 
     this.add = (boost) => {
+        if (boost.action != 'boost' && boost.action != 'zap') {
+            return // show only boosts and zaps for now
+        }
+
         this.pending.push(boost)
     }
 
@@ -468,6 +474,10 @@ function LastPayment() {
     this.add = (boost) => {
         if (this.current && this.current.creation_date > boost.creation_date) {
             return
+        }
+
+        if (boost.action != 'boost' && boost.action != 'zap') {
+            return // show only boosts and zaps for now
         }
 
         this.current = boost
