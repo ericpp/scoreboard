@@ -285,7 +285,6 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
 
         if (!old) {
             this.newPayments.add(payment)
-            pew.play()
         }
 
         this.identifiers.push(payment.identifier)
@@ -412,6 +411,8 @@ function NewPayments() {
         if (boost.action != 'boost' && boost.action != 'zap') {
             return // show only boosts and zaps for now
         }
+
+        pew.play()
 
         this.pending.push(boost)
     }
