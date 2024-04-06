@@ -42,7 +42,7 @@ let podcast = params.get("podcast")
 
 let nostrZappedEvent = params.get("nostrEvent") || "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1703119221"
 
-let after = params.get("after") || "2024-04-06 10:00:00 -0500"
+let after = params.get("after") || "2024-04-06 15:00:00 -0500"
 after = new Date(after)
 after = Math.floor(after / 1000)
 
