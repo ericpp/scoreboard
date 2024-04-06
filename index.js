@@ -24,7 +24,6 @@ const messageTime = 10
 
 const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
 const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
-const nostrZappedEvent = "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1703119221"
 
 let nostrPool
 
@@ -40,11 +39,11 @@ let pew = new Audio('pew.mp3')
 // apply podcast filter if specified in page url
 let params = (new URL(document.location)).searchParams
 let podcast = params.get("podcast")
-let after = params.get("after")
 
-if (after) after = new Date(after)
-else after = new Date('2024-04-06 00:00:00 -0500')
+let nostrZappedEvent = params.get("nostrEvent") || "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1703119221"
 
+let after = params.get("after") || "2024-04-06 00:00:00 -0500"
+after = new Date(after)
 after = Math.floor(after / 1000)
 
 let lastBoostAt = after
@@ -570,13 +569,12 @@ function Scoreboard(title, scores) {
         text(this.title, 0, y, windowWidth)
         y +=  1.5 * fontSize
 
-        textAlign(LEFT)
+        textAlign(RIGHT)
         fill(0, 255, 255)
         stroke(0, 60, 60)
-        text("SCORE", x + width/3, y, width)
-
-        textAlign(RIGHT)
+        text("SCORE", x + (width/2), y, 0)
         text("NAME", x, y, width)
+
         y += 1.5 * fontSize
 
         const topScores = this.scores.getTopScores()
@@ -635,9 +633,9 @@ function TopScore(position, name, sats) {
 
         textAlign(LEFT)
         text(place, x, y, width)
-        text(this.sats.toLocaleString(), x + width/3, y, width)
 
         textAlign(RIGHT)
+        text(this.sats.toLocaleString(), x + (width/2), y, 0)
         text(this.name.toUpperCase(), x, y, width)
 
         y += 1.25 * textSize()
