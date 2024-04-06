@@ -572,7 +572,7 @@ function Scoreboard(title, scores) {
         textAlign(RIGHT)
         fill(0, 255, 255)
         stroke(0, 60, 60)
-        text("SCORE", x + (width/2), y, 0)
+        text("SCORE", x + (width/2.5), y, 0)
         text("NAME", x, y, width)
 
         y += 1.5 * fontSize
@@ -635,7 +635,7 @@ function TopScore(position, name, sats) {
         text(place, x, y, width)
 
         textAlign(RIGHT)
-        text(this.sats.toLocaleString(), x + (width/2), y, 0)
+        text(this.sats.toLocaleString(), x + (width/2.5), y, 0)
         text(this.name.toUpperCase(), x, y, width)
 
         y += 1.25 * textSize()
