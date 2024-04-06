@@ -40,7 +40,7 @@ let pew = new Audio('pew.mp3')
 let params = (new URL(document.location)).searchParams
 let podcast = params.get("podcast")
 
-let nostrZappedEvent = params.get("nostrEvent") || "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1703119221"
+let nostrZappedEvent = params.get("nostrEvent") || "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1712441602"
 
 let after = params.get("after") || "2024-04-06 15:00:00 -0500"
 after = new Date(after)
