@@ -43,7 +43,7 @@ let podcast = params.get("podcast")
 let after = params.get("after")
 
 if (after) after = new Date(after)
-else after = new Date('2024-04-04 00:00:00 -0500')
+else after = new Date('2024-04-06 00:00:00 -0500')
 
 after = Math.floor(after / 1000)
 
