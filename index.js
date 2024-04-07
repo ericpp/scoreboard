@@ -328,7 +328,7 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
             identifier: zap.id,
             creation_date: zap.created_at,
             sender_name: sender_name || 'Anonymous',
-            app_name: 'Nostr',
+            app_name: 'Tunestr',
             sats: Math.floor(value_msat_total / 1000),
             message: zap.content,
         }, old)
