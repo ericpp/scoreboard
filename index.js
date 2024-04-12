@@ -30,8 +30,6 @@ let nostrPool
 const nostrNames = {};
 const nostrNameQueue = {};
 
-let lastInvoiceId = null
-
 let pollInterval = 10000
 
 let pew = new Audio('pew.mp3')
@@ -128,13 +126,7 @@ async function getBoosts(old) {
         const query = new URLSearchParams()
         query.set("page", page)
         query.set("items", items)
-
-        if (lastInvoiceId) {
-            query.set("since", lastInvoiceId)
-        }
-        else {
-            query.set("created_at_gt", lastBoostAt)
-        }
+        query.set("created_at_gt", lastBoostAt)
 
         const result = await fetch(`/api/boosts?${query}`)
         const boosts = await result.json()
@@ -144,7 +136,6 @@ async function getBoosts(old) {
         }
 
         lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
-        lastInvoiceId = boosts.filter(x => x.creation_date == lastBoostAt).map(x => x.identifier).shift() || lastInvoiceId
 
         if (podcast) {
             boosts = boosts.filter(x => x.boostagram.podcast == podcast)
