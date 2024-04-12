@@ -126,7 +126,7 @@ async function getBoosts(old) {
         const query = new URLSearchParams()
         query.set("page", page)
         query.set("items", items)
-        query.set("created_at_gt", lastBoostAt)
+        query.set("created_at_gt", after)
 
         const result = await fetch(`/api/boosts?${query}`)
         const boosts = await result.json()
