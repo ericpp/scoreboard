@@ -103,7 +103,7 @@ func SaveToDatabase(boost IncomingBoost) error {
 
     insertSql :=
     `INSERT INTO invoices
-        (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total, feedID, itemID, guid, episode_guid)
+        (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid)
     VALUES
         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     ON CONFLICT (identifier) DO NOTHING`
