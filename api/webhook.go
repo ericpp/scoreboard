@@ -81,11 +81,31 @@ func SaveToDatabase(boost IncomingBoost) error {
         value_msat_total = val
     }
 
+    var feedID *float64 = nil
+    if val, ok := tlv["feedID"].(float64); ok {
+        feedID = &val
+    }
+
+    var itemID *float64 = nil
+    if val, ok := tlv["itemID"].(float64); ok {
+        itemID = &val
+    }
+
+    guid := ""
+    if val, ok := tlv["guid"].(string); ok {
+        guid = val
+    }
+
+    episode_guid := ""
+    if val, ok := tlv["episode_guid"].(string); ok {
+        episode_guid = val
+    }
+
     insertSql :=
     `INSERT INTO invoices
-        (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total)
+        (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total, feedID, itemID, guid, episode_guid)
     VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     ON CONFLICT (identifier) DO NOTHING`
 
     _, err = db.Exec(
@@ -102,6 +122,10 @@ func SaveToDatabase(boost IncomingBoost) error {
         sender_name,
         message,
         value_msat_total,
+        feedID,
+        itemID,
+        guid,
+        episode_guid,
     )
 
     if err != nil {
