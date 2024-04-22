@@ -45,7 +45,7 @@ if (after) {
     after = Math.floor(new Date(after) / 1000)
 }
 
-let before = params.get("before")
+let before = params.get("before") || "2024-04-08 00:00:00 -0500"
 if (before) {
     before = Math.floor(new Date(before) / 1000)
 }
