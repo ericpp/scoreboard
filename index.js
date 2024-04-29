@@ -45,10 +45,12 @@ if (after) {
     after = Math.floor(new Date(after) / 1000)
 }
 
-let before = params.get("before") || "2024-04-08 00:00:00 -0500"
+let before = params.get("before") // || "2024-04-08 00:00:00 -0500"
 if (before) {
     before = Math.floor(new Date(before) / 1000)
 }
+
+let excludePodcasts = ["Podcasting 2.0", "Pew Pew"];
 
 let lastBoostAt = after
 
@@ -126,7 +128,6 @@ function boxedText(str, x, y, width, height) {
 async function getBoosts(old) {
     let page = 1
     let items = 1000
-    let boosts = []
 
     while (true) {
         const query = new URLSearchParams()
@@ -144,10 +145,16 @@ async function getBoosts(old) {
         lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
 
         if (podcast) {
-            boosts = boosts.filter(x => x.boostagram.podcast == podcast)
+            boosts = boosts.filter(invoice => invoice.boostagram.podcast == podcast)
         }
 
         boosts.forEach(invoice => {
+            const exclude = excludePodcasts.filter(filter => invoice.boostagram.podcast.indexOf(filter) !== -1).length
+
+            if (exclude) {
+                return
+            }
+
             if (before && before < invoice.creation_date) {
                 return
             }
@@ -168,7 +175,13 @@ async function initNostr(old) {
         onevent(event) {
             invoice = JSON.parse(event.content)
 
-            if (podcast && podcast != invoice.podcast) {
+            const exclude = excludePodcasts.filter(filter => invoice.boostagram.podcast.indexOf(filter) !== -1).length
+
+            if (exclude) {
+                return
+            }
+
+            if (podcast && podcast != invoice.boostagram.podcast) {
                 return
             }
 
