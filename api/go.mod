@@ -1,8 +1,6 @@
 module github.com/ericpp/scoreboard/api
 
-go 1.21
-
-toolchain go1.22.1
+go 1.20
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
