@@ -64,7 +64,7 @@ function setup(){
 
     tracker = new Tracker(producerScores, appScores, topCounters, lastPayment, newPayments)
     producers = new Scoreboard("- TOP PRODUCERS -", producerScores)
-    apps = new Scoreboard("- TOP APPS -", appScores)
+    apps = new Scoreboard("- TOP STREAMS -", appScores)
 
     getBoosts(true).then(() => {
         initNostr(true)
@@ -303,8 +303,9 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
             return
         }
 
-        this.producers.add(payment.sender_name || "Unknown", payment.sats)
-        this.apps.add(payment.app_name || "Unknown", payment.sats)
+        this.producers.add(payment.sender_name, payment.sats)
+        // this.apps.add(payment.app_name || "Unknown", payment.sats)
+        this.apps.add(payment.podcast.substr(0, 20), payment.sats)
         this.lastPayment.add(payment)
         this.topCounters.add(payment)
 
@@ -325,6 +326,7 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
             creation_date: invoice.creation_date,
             sender_name: boost.sender_name || 'Anonymous',
             app_name: boost.app_name || 'Unknown',
+            podcast: boost.podcast || 'Unknown',
             sats: Math.floor(boost.value_msat_total / 1000),
             message: boost.message,
         }, old)
@@ -355,6 +357,7 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
             creation_date: zap.created_at,
             sender_name: sender_name || 'Anonymous',
             app_name: 'Tunestr',
+            podcast: 'Tunestr',
             sats: Math.floor(value_msat_total / 1000),
             message: zap.content,
         }, old)
