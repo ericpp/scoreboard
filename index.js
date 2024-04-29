@@ -71,7 +71,7 @@ function setup(){
     })
 
     fontSize = windowHeight / heightToFont
-    boxWidth = windowWidth / 1.75
+    boxWidth = windowWidth / 1.5
 
     boxOffsetWidth = Math.floor((windowWidth - boxWidth) / 2)
     boxOffsetHeight = 0 // Math.floor((windowHeight - boxHeight) / 2)
@@ -81,7 +81,7 @@ function setup(){
 
 function windowResized() {
     fontSize = windowHeight / heightToFont
-    boxWidth = windowWidth / 1.75
+    boxWidth = windowWidth / 1.5
 
     boxOffsetWidth = Math.floor((windowWidth - boxWidth) / 2)
     boxOffsetHeight = 0// Math.floor((windowHeight - boxHeight) / 2)
