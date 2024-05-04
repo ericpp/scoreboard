@@ -20,7 +20,7 @@ let producerScores
 let apps
 let appScores
 
-const messageTime = 10
+const messageTime = 5
 
 const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
 const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
