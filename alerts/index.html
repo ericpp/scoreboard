@@ -1,0 +1,127 @@
+<html>
+<head>
+<title>Boost alerts</title>
+<style>
+  body {
+    background-color: black;
+  }
+
+  @font-face {
+    font-family: "Bitmojidama";
+    src:
+      local("Bitmojidama"),
+      url("Bitmojidama-Regular.otf") format("opentype"),
+      url("Bitmojidama-Regular.ttf") format("truetype");
+  }
+
+  #alert {
+    opacity: 0;
+    transition: opacity 0.7s linear;
+  }
+
+  #alert.show {
+    opacity: 1;
+  }
+
+</style>
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+</head>
+
+<body>
+<div id="box" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+  <div id="alert" style="width: 33%;">
+    <div class="message" style="font-family: Bitmojidama; font-size: 56px; color: white; position: relative; top: 275px; left: 50px;">test</div>
+    <img src="donation.gif" width="640" height="360">
+    <!--<img src="donation2.gif" width="672" height="162">-->
+  </div>
+</div>
+
+
+<script>
+(() => {
+  const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
+  const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
+  let nostrPool
+  const nostrNames = {};
+  const nostrNameQueue = {};
+
+  const params = (new URL(document.location)).searchParams
+  const pos = params.get("pos") || "tm"
+
+  const box = document.getElementById("box")
+  const alert = document.getElementById("alert")
+
+  switch (pos.substr(0, 1)) {
+    case "t": box.style.alignItems = "flex-start"
+      break
+    case "m": box.style.alignItems = "center"
+      break
+    case "b": box.style.alignItems = "flex-end"
+      break
+  }
+
+  switch (pos.substr(1, 1)) {
+    case "l": box.style.justifyContent = "flex-start"
+      break
+    case "m": box.style.justifyContent = "center"
+      break
+    case "r": box.style.justifyContent = "flex-end"
+      break
+  }
+
+  const showBoost = (message) => {
+
+    alert.classList.add("show")
+    alert.querySelector(".message").textContent = message
+
+    setTimeout(() => {
+      alert.classList.remove("show")
+    }, 5000)
+  }
+window.showBoost = showBoost
+
+
+  async function initNostr() {
+    nostrPool = new NostrTools.SimplePool()
+
+    let isOld = true
+    let timer = null
+
+    nostrPool.subscribeMany(nostrRelays, [{authors: [nostrBoostPkey]}], {
+      onevent(event) {
+        let invoice = JSON.parse(event.content)
+
+        if (!isOld) {
+          const boost = invoice.boostagram
+          if (boost.message) {
+            showBoost(`${boost.message} - ${boost.sender_name}`)
+          }
+          else {
+            const sats = Math.floor(boost.value_msat_total / 1000)
+            showBoost(`${sats} from ${boost.sender_name}`)
+          }
+          return
+        }
+
+        if (timer) {
+          clearTimeout(timer)
+        }
+
+        timer = setTimeout(() => {
+          console.log("is old off")
+          isOld = false
+        }, 1000)
+      },
+      oneose() {
+        // h.close()
+      }
+    })
+  }
+
+  initNostr()
+
+})()
+
+</script>
+</body>
+</html>
