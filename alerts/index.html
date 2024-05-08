@@ -93,6 +93,11 @@ window.showBoost = showBoost
 
         if (!isOld) {
           const boost = invoice.boostagram
+
+          if (boost.action != "boost") {
+            return
+          }
+
           if (boost.message) {
             showBoost(`${boost.message} - ${boost.sender_name}`)
           }
@@ -100,6 +105,7 @@ window.showBoost = showBoost
             const sats = Math.floor(boost.value_msat_total / 1000)
             showBoost(`${sats} from ${boost.sender_name}`)
           }
+
           return
         }
 
