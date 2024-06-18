@@ -7,11 +7,13 @@
   }
 
   @font-face {
-    font-family: "Bitmojidama";
-    src:
-      local("Bitmojidama"),
-      url("Bitmojidama-Regular.otf") format("opentype"),
-      url("Bitmojidama-Regular.ttf") format("truetype");
+    font-family: 'Munro-Small';
+      src: url('Munro-Small.ttf.woff') format('woff'),
+      url('Munro-Small.ttf.svg#Munro-Small') format('svg'),
+      url('Munro-Small.ttf.eot'),
+      url('Munro-Small.eot?#iefix') format('embedded-opentype');
+      font-weight: normal;
+      font-style: normal;
   }
 
   #alert {
@@ -30,7 +32,7 @@
 <body>
 <div id="box" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
   <div id="alert" style="width: 33%;">
-    <div class="message" style="font-family: Bitmojidama; font-size: 56px; color: white; position: relative; top: 278px; left: 50px;">test</div>
+    <div class="message" style="font-family: Munro-Small; font-size: 56px; color: white; position: relative; top: 278px; left: 50px;">test</div>
     <img src="donation.gif" width="640" height="360">
     <!--<img src="donation2.gif" width="672" height="162">-->
   </div>
