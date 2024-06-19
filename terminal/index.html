@@ -252,7 +252,7 @@ function Scores(el, metric, num) {
 
         el.innerHTML = this.topScores.map(score => {
             const sats = (score.sats || 0).toLocaleString()
-            return `<tr><td>#${score.position}</td><td>${score.name}</td><td>${sats}</td></tr>`
+            return `<tr><td>#${score.position}</td><td>${score.name}</td><td style="text-align: right">${sats}</td></tr>`
         }).join("")
     }
 }
