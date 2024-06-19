@@ -2,32 +2,37 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style type="text/css">
+
 @import url(https://fonts.googleapis.com/css?family=VT323);
 
-
-@keyframes blink {
-  to{opacity: .0;}
-}
-
-@keyframes scan {
-    from { top: 0 }
-    to { top: 100% }
-}
-
-::-webkit-scrollbar {
-  display: none;
+:root {
+  --background-bloom: #aa00aa;
+  --background: #000000;
+  --foreground: #ff00ff;
+  --inverse-background: #ff00ff;
+  --inverse-foreground: #400040;
+  --shadow: #800080;
 }
 
 html,
 body {
-  background: #000000;
-  color: #ff00ff;
-  text-shadow: 0 0 2px rgba(255, 10, 255, 0.8);
+  background: var(--background);
+  color: var(--foreground);
   font-family: 'VT323', Courier;
   height: 100%;
   margin: 0;
   padding: 0;
-  font-size: 24px;
+  font-size: 1.25rem;
+}
+
+fieldset {
+  border: 5px solid var(--foreground);
+  margin-top: 1rem;
+}
+
+table {
+  font-size: inherit;
+  width: 100%;
 }
 
 .interlace {
@@ -56,7 +61,7 @@ body {
   right: 0;
   bottom: 0;
   opacity: 0.5;
-  background: radial-gradient(ellipse at center, #aa00aa 0%, rgba(0, 0, 0, 0) 150%);
+  background: radial-gradient(ellipse at center, var(--background-bloom) 0%, rgba(0, 0, 0, 0) 150%);
   content: "";
 }
 
@@ -68,9 +73,10 @@ body {
 }
 
 .inverse {
-  background-color: #ff00ff;
-  color: rgba(0, 0, 0, 0.7);
+  background-color: var(--inverse-background);
+  color: var(--inverse-foreground);
   font-weight: 900;
+  box-shadow: 0 0 2px var(--shadow);
 }
 
 .cols {
@@ -82,7 +88,7 @@ body {
 /* md */
 @media (min-width: 768px) {
   html, body {
-    font-size: 36px;
+    font-size: 1.5rem;
   }
 }
 
@@ -104,20 +110,28 @@ body {
       TOTAL SATS: 1,234,5678
     </div>
 
-    <div class="cols" style="margin-top: 1rem;">
-      <div style="border: 5px solid #ff00ff; padding: 1rem;">
-        <center style="text-decoration: underline">TOP BOOSTERS</center>
-        <table style="font-size: inherit; width: 100%; margin-top: 1rem; ">
+    <fieldset>
+      <legend>LATEST BOOST</legend>
+      TEST TEST TEST
+    </fieldset>
+
+    <div class="cols">
+      <fieldset>
+        <legend>TOP BOOSTERS</legend>
+
+        <table>
           <tr><td>#1</td><td>PETAR</td><td style="text-align: right">1,000,000</td></tr>
           <tr><td>#2</td><td>TJUNTA</td><td style="text-align: right">500,000</td></tr>
           <tr><td>#3</td><td>MARYKATE</td><td style="text-align: right">250,000</td></tr>
           <tr><td>#4</td><td>LAURIEN</td><td style="text-align: right">100,000</td></tr>
           <tr><td>#5</td><td>DAISY</td><td style="text-align: right">50,000</td></tr>
         </table>
-      </div>
-      <div style="border: 5px solid #ff00ff; padding: 1rem;">
-        <center style="text-decoration: underline">TOP APPS</center>
-        <table style="font-size: inherit; width: 100%; margin-top: 1rem;">
+      </fieldset>
+
+      <fieldset>
+        <legend>TOP APPS</legend>
+
+        <table>
           <tr><td>#1</td><td>PODVERSE</td><td style="text-align: right">1,000,000</td></tr>
           <tr><td>#2</td><td>PODCAST GURU</td><td style="text-align: right">500,000</td></tr>
           <tr><td>#3</td><td>FOUNTAIN</td><td style="text-align: right">250,000</td></tr>
