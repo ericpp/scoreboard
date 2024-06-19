@@ -1,0 +1,64 @@
+<html>
+<head>
+<title>List</title>
+<style>
+  body {
+    background-color: black;
+    color: white;
+    font-size: 24px;
+  }
+</style>
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+</head>
+
+<body>
+
+<h3>Boosts</h3>
+
+<ul id="list">
+</ul>
+
+<script>
+(() => {
+  const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
+  const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
+  let nostrPool
+
+  const list = document.getElementById("list")
+
+  async function initNostr() {
+    nostrPool = new NostrTools.SimplePool()
+
+    nostrPool.subscribeMany(nostrRelays, [{authors: [nostrBoostPkey]}], {
+      onevent(event) {
+        let invoice = JSON.parse(event.content)
+        const boost = invoice.boostagram
+
+        if (boost.action != "boost") {
+          return
+        }
+
+        const sats = Math.floor(boost.value_msat_total / 1000)
+        let message = `${boost.podcast} - ${sats} sats from ${boost.sender_name}`
+
+        if (boost.message) {
+          message += `: ${boost.message}`
+        }
+
+        const li = document.createElement("li")
+        li.appendChild(document.createTextNode(message))
+        list.insertBefore(li, list.firstChild)
+      },
+      oneose() {
+        // h.close()
+      }
+    })
+  }
+
+  initNostr()
+
+})()
+
+</script>
+</body>
+</html>
