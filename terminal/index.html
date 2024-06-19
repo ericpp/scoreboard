@@ -1,6 +1,10 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+
 <style type="text/css">
 
 @import url(https://fonts.googleapis.com/css?family=VT323);
@@ -100,6 +104,195 @@ table {
 }
 
 </style>
+
+<script>
+
+
+
+function SatCounter(el) {
+    this.total = 0
+    this.drawTotal = 0
+    this.increment = 0
+    this.el = el
+    this.interval = null
+
+    const randomInt = (min, max) => {
+        return Math.floor((Math.random() * (max - min)) + min)
+    }
+
+    this.add = (payment, old) => {
+        this.total += payment.sats
+        this.increment = Math.floor(this.total / 240)
+        this.shouldRender()
+    }
+
+    this.shouldRender = () => {
+        if (this.interval) {
+            return
+        }
+
+        this.interval = setInterval(() => {
+            if (this.drawTotal >= this.total) {
+                clearInterval(this.interval)
+                this.interval = null
+            }
+
+            this.render()
+        }, 10)
+    }
+
+    this.render = () => {
+        const el = document.querySelector(this.el)
+
+        const diff = this.total - this.drawTotal
+
+        if (diff > 0) {
+            this.drawTotal += Math.min(diff, randomInt(50, this.increment))
+        }
+
+        el.textContent = this.drawTotal.toLocaleString()
+    }
+}
+
+function LatestPayment(el) {
+    this.current = null
+    this.el = el
+
+    this.add = (boost) => {
+        if (this.current && this.current.creation_date > boost.creation_date) {
+            return
+        }
+
+        if (boost.action != 'boost' && boost.action != 'zap') {
+            return // show only boosts and zaps for now
+        }
+
+        this.current = boost
+        this.render()
+    }
+
+    this.render = () => {
+        const el = document.querySelector(this.el)
+
+        const sender = this.current.sender_name
+        const sats = this.current.sats.toLocaleString()
+        const boostzap = (this.current.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
+        const app = (this.current.type == 'boost' ? `FROM ${this.current.app_name}` : '')
+
+        let message = document.createElement("div")
+        message.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()))
+        message.appendChild(document.createElement("br"))
+
+        if (this.current.message) {
+            message.appendChild(document.createTextNode(this.current.message))
+        }
+
+        el.innerHTML = message.innerHTML
+    }
+}
+
+function TopScore(position, name, sats) {
+    this.position = position
+    this.name = name
+    this.sats = sats
+    this.updated = 0
+
+    this.update = (name, sats) => {
+        if (name != this.name || sats != this.sats) {
+            this.updated = 90
+        }
+
+        this.name = name
+        this.sats = sats
+    }
+
+    this.isUpdated = () => {
+        return this.updated > 0 && this.updated--
+    }
+}
+
+function Scores(el, metric, num) {
+    this.scores = {}
+    this.topScores = []
+    this.el = el
+    this.metric = metric
+
+    for (let idx = 0; idx < num; idx++) {
+        this.topScores[idx] = new TopScore(idx + 1, null, null)
+    }
+
+    this.add = (payment, old) => {
+        name = payment[metric].toUpperCase()
+
+        if (!this.scores[name]) {
+            this.scores[name] = {'name': name, 'sats': 0}
+        }
+
+        this.scores[name].sats += payment.sats
+        this.updateTopScores()
+        this.render()
+    }
+
+    this.updateTopScores = () => {
+        const newTopScores = Object.values(this.scores).sort((a, b) => {
+            return b.sats - a.sats
+        }).slice(0, num)
+
+        newTopScores.forEach((score, idx) => {
+            this.topScores[idx].update(score.name, score.sats)
+        })
+    }
+
+    this.getTopScores = () => {
+        return this.topScores.filter(x => x.name)
+    }
+
+    this.render = () => {
+        const el = document.querySelector(this.el)
+
+        el.innerHTML = this.topScores.map(score => {
+            const sats = (score.sats || 0).toLocaleString()
+            return `<tr><td>#${score.position}</td><td>${score.name}</td><td>${sats}</td></tr>`
+        }).join("")
+    }
+}
+
+(() => {
+    let totalSats = new SatCounter('#totalSats')
+    let latestBoost = new LatestPayment('#latest')
+    let topBoosters = new Scores('#boosters', 'sender_name', 5)
+    let topApps = new Scores('#apps', 'app_name', 5)
+
+    let app = new PaymentTracker()
+
+    app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
+
+    let params = (new URL(document.location)).searchParams
+
+    let after = params.get("after") || "2024-04-06 15:00:00 -0500"
+    if (after) {
+        app.setFilter('after', Math.floor(new Date(after) / 1000))
+    }
+
+    let before = params.get("before") // || "2024-04-08 00:00:00 -0500"
+    if (before) {
+        app.setFilter('before', Math.floor(new Date(before) / 1000))
+    }
+
+    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew"])
+
+    app.setListener((payment, old) => {
+        latestBoost.add(payment, old)
+        topBoosters.add(payment, old)
+        topApps.add(payment, old)
+        totalSats.add(payment, old)
+    })
+
+    app.start()
+})()
+
+</script>
+
 </head>
 <body>
 <div class="interlace"></div>
@@ -107,36 +300,24 @@ table {
   <div class="content">
 
     <div class="inverse" style="text-align: center">
-      TOTAL SATS: 1,234,5678
+      TOTAL SATS: <span id="totalSats">-</span>
     </div>
 
     <fieldset>
       <legend>LATEST BOOST</legend>
-      TEST TEST TEST
+      <span id="latest"></span>
     </fieldset>
 
     <div class="cols">
       <fieldset>
         <legend>TOP BOOSTERS</legend>
-
-        <table>
-          <tr><td>#1</td><td>PETAR</td><td style="text-align: right">1,000,000</td></tr>
-          <tr><td>#2</td><td>TJUNTA</td><td style="text-align: right">500,000</td></tr>
-          <tr><td>#3</td><td>MARYKATE</td><td style="text-align: right">250,000</td></tr>
-          <tr><td>#4</td><td>LAURIEN</td><td style="text-align: right">100,000</td></tr>
-          <tr><td>#5</td><td>DAISY</td><td style="text-align: right">50,000</td></tr>
+        <table id="boosters">
         </table>
       </fieldset>
 
       <fieldset>
         <legend>TOP APPS</legend>
-
-        <table>
-          <tr><td>#1</td><td>PODVERSE</td><td style="text-align: right">1,000,000</td></tr>
-          <tr><td>#2</td><td>PODCAST GURU</td><td style="text-align: right">500,000</td></tr>
-          <tr><td>#3</td><td>FOUNTAIN</td><td style="text-align: right">250,000</td></tr>
-          <tr><td>#4</td><td>CURIOCASTER</td><td style="text-align: right">100,000</td></tr>
-          <tr><td>#5</td><td>TRUEFANS</td><td style="text-align: right">50,000</td></tr>
+        <table id="apps">
         </table>
       </div>
     </div>
