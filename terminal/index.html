@@ -23,11 +23,11 @@ body {
   background: #000000;
   color: #ff00ff;
   text-shadow: 0 0 2px rgba(255, 10, 255, 0.8);
-  font-size: 1.6rem;
   font-family: 'VT323', Courier;
   height: 100%;
   margin: 0;
   padding: 0;
+  font-size: 24px;
 }
 
 .interlace {
@@ -61,7 +61,7 @@ body {
 }
 
 .content { 
-  padding: 1.6rem;
+  padding: 1rem;
   position: relative;
   background: transparent;
   z-index: 98;
@@ -75,10 +75,18 @@ body {
 
 .cols {
   display: grid;
-  gap: 1.6rem;
+  gap: 1rem;
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
+/* md */
+@media (min-width: 768px) {
+  html, body {
+    font-size: 36px;
+  }
+}
+
+/* lg */
 @media (min-width: 1024px) {
   .cols {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -97,9 +105,9 @@ body {
     </div>
 
     <div class="cols" style="margin-top: 1rem;">
-      <div style="border: 5px solid #ff00ff; padding: 1.6rem;">
+      <div style="border: 5px solid #ff00ff; padding: 1rem;">
         <center style="text-decoration: underline">TOP BOOSTERS</center>
-        <table style="font-size: 1.6rem; width: 100%; margin-top: 1rem; ">
+        <table style="font-size: inherit; width: 100%; margin-top: 1rem; ">
           <tr><td>#1</td><td>PETAR</td><td style="text-align: right">1,000,000</td></tr>
           <tr><td>#2</td><td>TJUNTA</td><td style="text-align: right">500,000</td></tr>
           <tr><td>#3</td><td>MARYKATE</td><td style="text-align: right">250,000</td></tr>
@@ -107,9 +115,9 @@ body {
           <tr><td>#5</td><td>DAISY</td><td style="text-align: right">50,000</td></tr>
         </table>
       </div>
-      <div style="border: 5px solid #ff00ff; padding: 1.6rem;">
+      <div style="border: 5px solid #ff00ff; padding: 1rem;">
         <center style="text-decoration: underline">TOP APPS</center>
-        <table style="font-size: 1.6rem; width: 100%; margin-top: 1rem;">
+        <table style="font-size: inherit; width: 100%; margin-top: 1rem;">
           <tr><td>#1</td><td>PODVERSE</td><td style="text-align: right">1,000,000</td></tr>
           <tr><td>#2</td><td>PODCAST GURU</td><td style="text-align: right">500,000</td></tr>
           <tr><td>#3</td><td>FOUNTAIN</td><td style="text-align: right">250,000</td></tr>
