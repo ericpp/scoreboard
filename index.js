@@ -12,7 +12,8 @@ let boxOffsetHeight
 let stars
 let numstars = 50
 
-let tracker
+let scoreTracker
+let paymentTracker
 let newPayments
 let producers
 let producerScores
@@ -22,37 +23,12 @@ let appScores
 
 const messageTime = 8
 
-const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
-const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
-
-let nostrPool
-
-const nostrNames = {};
-const nostrNameQueue = {};
-
 let pollInterval = 10000
 
 let pew = new Audio('pew.mp3')
 
-// apply podcast filter if specified in page url
-let params = (new URL(document.location)).searchParams
-let podcast = params.get("podcast")
-
-let nostrZappedEvent = params.get("nostrEvent") || "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1712441602"
-
-let after = params.get("after") || "2024-04-06 15:00:00 -0500"
-if (after) {
-    after = Math.floor(new Date(after) / 1000)
-}
-
-let before = params.get("before") // || "2024-04-08 00:00:00 -0500"
-if (before) {
-    before = Math.floor(new Date(before) / 1000)
-}
-
-let excludePodcasts = ["Podcasting 2.0", "Pew Pew"];
-
-let lastBoostAt = after
+const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
+const nostrZapEvent = "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1712441602"
 
 function setup(){
     stars = new Stars(numstars)
@@ -62,13 +38,30 @@ function setup(){
     lastPayment = new LastPayment()
     topCounters = new TopCounters()
 
-    tracker = new Tracker(producerScores, appScores, topCounters, lastPayment, newPayments)
+    let params = (new URL(document.location)).searchParams
+
+    paymentTracker = new PaymentTracker()
+
+    paymentTracker.setNostrBoostPkey(nostrBoostPkey)
+    paymentTracker.setNostrZapEvent(params.get("nostrEvent") || nostrZapEvent)
+
+    // apply filters specified in page url
+    paymentTracker.setFilter("podcast", params.get("podcast"))
+    paymentTracker.setFilter("after", params.get("after") || "2024-04-06 15:00:00 -0500")
+    paymentTracker.setFilter("before", params.get("before")) // || "2024-04-08 00:00:00 -0500"
+
+    paymentTracker.setFilter("excludePodcasts", ["Podcasting 2.0", "Pew Pew"])
+
+    scoreTracker = new ScoreTracker(producerScores, appScores, topCounters, lastPayment, newPayments)
+
+    paymentTracker.setListener((payment, old) => {
+        scoreTracker.add(payment, old)
+    })
+
+    paymentTracker.start()
+
     producers = new Scoreboard("- TOP PRODUCERS -", producerScores)
     apps = new Scoreboard("- TOP STREAMS -", appScores)
-
-    getBoosts(true).then(() => {
-        initNostr(true)
-    })
 
     fontSize = windowHeight / heightToFont
     boxWidth = windowWidth / 1.5
@@ -125,168 +118,7 @@ function boxedText(str, x, y, width, height) {
     pop()
 }
 
-async function getBoosts(old) {
-    let page = 1
-    let items = 1000
-
-    while (true) {
-        const query = new URLSearchParams()
-        query.set("page", page)
-        query.set("items", items)
-        query.set("created_at_gt", after)
-
-        const result = await fetch(`/api/boosts?${query}`)
-        const boosts = await result.json()
-
-        if (!boosts || boosts.length === 0) {
-            break
-        }
-
-        lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
-
-        if (podcast) {
-            boosts = boosts.filter(invoice => invoice.boostagram.podcast == podcast)
-        }
-
-        boosts.forEach(invoice => {
-            const exclude = excludePodcasts.filter(filter => invoice.boostagram.podcast.indexOf(filter) !== -1).length
-
-            if (exclude) {
-                return
-            }
-
-            if (before && before < invoice.creation_date) {
-                return
-            }
-
-            tracker.addBoost(invoice, true)
-        })
-
-        page++
-    }
-}
-
-async function initNostr(old) {
-    nostrPool = new NostrTools.SimplePool()
-
-    let isOld = old
-
-    nostrPool.subscribeMany(nostrRelays, [{authors: [nostrBoostPkey]}], {
-        onevent(event) {
-            invoice = JSON.parse(event.content)
-
-            const exclude = excludePodcasts.filter(filter => invoice.boostagram.podcast.indexOf(filter) !== -1).length
-
-            if (exclude) {
-                return
-            }
-
-            if (podcast && podcast != invoice.boostagram.podcast) {
-                return
-            }
-
-            if (before && before < invoice.creation_date) {
-                return
-            }
-
-            if (after && after > invoice.creation_date) {
-                return
-            }
-
-            if (lastBoostAt > invoice.creation_date) {
-                return
-            }
-
-            tracker.addBoost(invoice, isOld)
-        },
-        oneose() {
-            // h.close()
-        }
-    })
-
-    nostrPool.subscribeMany(nostrRelays, [{'#a': [nostrZappedEvent], 'kinds': [9735]}], {
-        async onevent(event) {
-            if (before && before < event.created_at) {
-                return
-            }
-
-            if (after && after > event.created_at) {
-                return
-            }
-
-            await tracker.addZap(event, isOld)
-        },
-        oneose() {
-            // h.close()
-        }
-    })
-
-    setInterval(async () => {
-        if (!nostrNameQueue) return
-
-        let pubkeys = Object.keys(nostrNameQueue)
-        if (pubkeys.length === 0) return
-
-        let profiles = await nostrPool.querySync(nostrRelays, {authors: pubkeys, kinds: [0]})
-
-        profiles.forEach(event => {
-            const profile = JSON.parse(event.content)
-            nostrNames[event.pubkey] = profile.display_name || profile.name
-        })
-
-        for (let pubkey of pubkeys) {
-            let resolvers = nostrNameQueue[pubkey]
-
-            if (resolvers) {
-                delete nostrNameQueue[pubkey]
-
-                resolvers.forEach(resolve => {
-                    resolve(nostrNames[pubkey] || null)
-                })
-            }
-        }
-
-    }, 1000)
-
-    setTimeout(() => { isOld = false }, 5000)
-}
-
-function getNostrName(pubkey) {
-    return new Promise((resolve, reject) => {
-        if (nostrNames[pubkey]) {
-            resolve(nostrNames[pubkey])
-        }
-        else {
-            if (!nostrNameQueue[pubkey]) {
-                nostrNameQueue[pubkey] = []
-            }
-
-            nostrNameQueue[pubkey].push(resolve)
-        }
-    })
-}
-
-function getMsatsFromBolt11(bolt11) {
-    const multipliers = {
-        m: 100000000,
-        u: 100000,
-        n: 100,
-        p: 0.1,
-    }
-
-    // msat amount encoded in the first part (e.g. lnbc100n -> 100n -> 100 * 100 = 100,000)
-    let matches = bolt11.match(/^ln\w+?(\d+)([a-zA-Z]?)/)
-
-    if (!matches) {
-        return null // no match
-    }
-
-    // calculate the msats from the number and multiplier
-    return parseInt(matches[1]) * multipliers[matches[2]]
-}
-
-
-function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
+function ScoreTracker(producers, apps, topCounters, lastPayment, newPayments) {
     this.producers = producers
     this.apps = apps
     this.topCounters = topCounters
@@ -315,54 +147,6 @@ function Tracker(producers, apps, topCounters, lastPayment, newPayments) {
 
         this.identifiers.push(payment.identifier)
     }
-
-    this.addBoost = async (invoice, old) => {
-        const boost = invoice.boostagram
-
-        this.add({
-            type: 'boost',
-            action: boost.action || 'unknown',
-            identifier: invoice.identifier,
-            creation_date: invoice.creation_date,
-            sender_name: boost.sender_name || 'Anonymous',
-            app_name: boost.app_name || 'Unknown',
-            podcast: boost.podcast || 'Unknown',
-            sats: Math.floor(boost.value_msat_total / 1000),
-            message: boost.message,
-        }, old)
-    }
-
-    this.addZap = async (zap, old) => {
-        const tags = zap.tags.reduce((result, tag) => {
-            const [name, value] = tag
-            if (!result[name]) result[name] = []
-            result[name].push(value)
-            return result
-        }, {})
-
-        // original zap request is encoded as a tag in the zap receipt
-        const zaprequest = JSON.parse(tags['description'][0])
-
-        // msats can be calculated from bolt11 request
-        const value_msat_total = getMsatsFromBolt11(tags['bolt11'][0])
-
-        // batch look up names based on original zap request pubkey
-        const sender_name = await getNostrName(zaprequest.pubkey)
-
-        // push
-        this.add({
-            type: 'zap',
-            action: 'zap',
-            identifier: zap.id,
-            creation_date: zap.created_at,
-            sender_name: sender_name || 'Anonymous',
-            app_name: 'Tunestr',
-            podcast: 'Tunestr',
-            sats: Math.floor(value_msat_total / 1000),
-            message: zap.content,
-        }, old)
-    }
-
 }
 
 function SatCounter(title) {
