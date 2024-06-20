@@ -247,12 +247,18 @@ function Scores(el, metric, num) {
         return this.topScores.filter(x => x.name)
     }
 
+    this.escapeHtml = (text) => {
+        const div = document.createElement("div")
+        div.appendChild(document.createTextNode(text))
+        return div.innerHTML
+    }
+
     this.render = () => {
         const el = document.querySelector(this.el)
 
         el.innerHTML = this.topScores.map(score => {
             const sats = (score.sats || 0).toLocaleString()
-            return `<tr><td>#${score.position}</td><td>${score.name}</td><td style="text-align: right">${sats}</td></tr>`
+            return `<tr><td style="width: 2rem;">#${score.position}</td><td>${this.escapeHtml(score.name)}</td><td style="text-align: right">${sats}</td></tr>`
         }).join("")
     }
 }
