@@ -1,5 +1,6 @@
 <html>
 <head>
+<title>C:\BOOSTS\BOARD.EXE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
@@ -23,7 +24,6 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'VT323', Courier;
-  height: 100%;
   margin: 0;
   padding: 0;
   font-size: 1.25rem;
@@ -32,6 +32,7 @@ body {
 fieldset {
   border: 5px solid var(--foreground);
   margin-top: 1rem;
+  box-sizing: border-box;
 }
 
 table {
@@ -47,7 +48,7 @@ table {
   background: linear-gradient(rgba(0, 0, 0, 0.1) 50%, rgba(255, 255, 255, 0.1) 50%);
   background-size: 100% 4px;
   background-repeat: repeat-y;
-  z-index: 99;
+  z-index: 200;
   width: 100%;
   height: 100%;
 }
@@ -73,7 +74,7 @@ table {
   padding: 1rem;
   position: relative;
   background: transparent;
-  z-index: 98;
+  z-index: 1;
 }
 
 .inverse {
@@ -83,16 +84,51 @@ table {
   box-shadow: 0 0 2px var(--shadow);
 }
 
+.inverse fieldset {
+  border: 5px solid var(--background);
+}
+
 .cols {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
+.newBoostWrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  margin-top: 7rem;
+}
+
+#newBoost {
+  transition: height 500ms linear;
+  margin: 1rem;
+  overflow: hidden;
+  height: 0;
+}
+
+#newBoost.shown {
+  height: 15rem;
+  padding-bottom: 5px;
+}
+
+#newBoost fieldset {
+  height: 100%;
+  margin-top: 0;
+}
+
 /* md */
 @media (min-width: 768px) {
   html, body {
     font-size: 1.5rem;
+  }
+
+  .newBoostWrapper {
+    margin-top: 9rem;
   }
 }
 
@@ -101,13 +137,15 @@ table {
   .cols {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .newBoostWrapper {
+    margin-top: 4rem;
+  }
 }
 
 </style>
 
 <script>
-
-
 
 function SatCounter(el) {
     this.total = 0
@@ -181,6 +219,7 @@ function LatestPayment(el) {
 
         let message = document.createElement("div")
         message.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()))
+        message.appendChild(document.createElement("br"))
         message.appendChild(document.createElement("br"))
 
         if (this.current.message) {
@@ -263,11 +302,82 @@ function Scores(el, metric, num) {
     }
 }
 
-(() => {
+function NewPayments(el, displayTime) {
+    this.$el = document.querySelector(el)
+    this.displayTime = displayTime
+    this.pending = []
+    this.transitioning = false
+
+    this.$el.addEventListener('transitionstart', (event) => {
+        this.transitioning = true
+    })
+
+    this.$el.addEventListener('transitionend', (event) => {
+        this.transitioning = false
+    })
+
+    this.timer = setInterval(() => {
+        const shown = this.$el.classList.contains('shown')
+
+        if (shown || this.transitioning) {
+            return // already showing a message
+        }
+
+        this.render()
+    }, 1000)
+
+    this.add = (boost, old) => {
+        if (boost.action != 'boost' && boost.action != 'zap') {
+            return // show only boosts and zaps for now
+        }
+
+        if (old) {
+            return // ignore old boosts
+        }
+
+        this.pending.push(boost)
+    }
+
+    this.render = () => {
+        if (this.pending.length === 0) {
+            return // no pending items
+        }
+
+        const payment = this.pending.shift()
+
+        const sender = payment.sender_name
+        const sats = payment.sats.toLocaleString()
+        const boostzap = (payment.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
+        const app = (payment.type == 'boost' ? `FROM ${payment.app_name}` : '')
+
+        const div = document.createElement("div")
+        div.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()))
+
+        if (payment.message) {
+            div.appendChild(document.createElement("br"))
+            div.appendChild(document.createElement("br"))
+            div.appendChild(document.createTextNode(payment.message))
+        }
+
+        this.$el.querySelector('#newBoostMesage').innerHTML = div.innerHTML
+
+        this.$el.classList.add('shown')
+
+        setTimeout(() => {
+            this.$el.classList.remove('shown')
+        }, this.displayTime)
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const scoreSlots = 5
+    const displayTime = 3000
+
     let totalSats = new SatCounter('#totalSats')
     let latestBoost = new LatestPayment('#latest')
-    let topBoosters = new Scores('#boosters', 'sender_name', 5)
-    let topApps = new Scores('#apps', 'app_name', 5)
+    let topBoosters = new Scores('#boosters', 'sender_name', scoreSlots)
+    let topApps = new Scores('#apps', 'app_name', scoreSlots)
+    let newPayments = new NewPayments('#newBoost', displayTime)
 
     let app = new PaymentTracker()
 
@@ -275,27 +385,22 @@ function Scores(el, metric, num) {
 
     let params = (new URL(document.location)).searchParams
 
-    let after = params.get("after") || "2024-04-06 15:00:00 -0500"
-    if (after) {
-        app.setFilter('after', Math.floor(new Date(after) / 1000))
-    }
-
-    let before = params.get("before") // || "2024-04-08 00:00:00 -0500"
-    if (before) {
-        app.setFilter('before', Math.floor(new Date(before) / 1000))
-    }
+    app.setFilter('after', params.get("after") || "2024-04-06 15:00:00 -0500")
+    app.setFilter('before', params.get("before")) // || "2024-04-08 00:00:00 -0500")
 
     app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew"])
 
     app.setListener((payment, old) => {
+        console.log(payment, old)
         latestBoost.add(payment, old)
         topBoosters.add(payment, old)
         topApps.add(payment, old)
         totalSats.add(payment, old)
+        newPayments.add(payment, old)
     })
 
     app.start()
-})()
+})
 
 </script>
 
@@ -303,8 +408,17 @@ function Scores(el, metric, num) {
 <body>
 <div class="interlace"></div>
 <div class="wrapper">
-  <div class="content">
+<div class="newBoostWrapper">
 
+  <div id="newBoost" class="inverse">
+    <fieldset>
+        <legend>NEW BOOST RECEIVED</legend>
+        <span id="newBoostMesage"></span>
+      </fieldset>
+    </div>
+  </div>
+
+  <div class="content">
     <div class="inverse" style="text-align: center">
       TOTAL SATS: <span id="totalSats">-</span>
     </div>
