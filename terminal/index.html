@@ -219,10 +219,10 @@ function LatestPayment(el) {
 
         let message = document.createElement("div")
         message.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()))
-        message.appendChild(document.createElement("br"))
-        message.appendChild(document.createElement("br"))
 
         if (this.current.message) {
+            message.appendChild(document.createElement("br"))
+            message.appendChild(document.createElement("br"))
             message.appendChild(document.createTextNode(this.current.message))
         }
 
