@@ -391,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
     app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew"])
 
     app.setListener((payment, old) => {
-        console.log(payment, old)
         latestBoost.add(payment, old)
         topBoosters.add(payment, old)
         topApps.add(payment, old)
