@@ -33,6 +33,7 @@ fieldset {
   border: 5px solid var(--foreground);
   margin-top: 1rem;
   box-sizing: border-box;
+  padding: 0.25rem;
 }
 
 table {
@@ -70,11 +71,11 @@ table {
   content: "";
 }
 
-.content { 
-  padding: 1rem;
+.content {
   position: relative;
   background: transparent;
   z-index: 1;
+  padding: 0;
 }
 
 .inverse {
@@ -86,6 +87,17 @@ table {
 
 .inverse fieldset {
   border: 5px solid var(--background);
+}
+
+.position {
+  display: none;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 5rem;
 }
 
 .cols {
@@ -124,6 +136,14 @@ table {
 @media (min-width: 768px) {
   html, body {
     font-size: 1.5rem;
+  }
+
+  .content {
+    padding: 1rem;
+  }
+
+  .position {
+    display: inline;
   }
 
   .newBoostWrapper {
@@ -297,7 +317,7 @@ function Scores(el, metric, num) {
 
         el.innerHTML = this.topScores.map(score => {
             const sats = (score.sats || 0).toLocaleString()
-            return `<tr><td style="width: 2rem;">#${score.position}</td><td>${this.escapeHtml(score.name)}</td><td style="text-align: right">${sats}</td></tr>`
+            return `<tr><td class="position" style="width: 2rem;">#${score.position}</td><td class="truncate">${this.escapeHtml(score.name)}</td><td style="text-align: right">${sats}</td></tr>`
         }).join("")
     }
 }
