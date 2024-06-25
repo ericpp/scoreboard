@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>Boost alerts</title>
+<title>BOOST ALERT</title>
 <style>
   body {
     background-color: black;
@@ -16,6 +16,15 @@
       font-style: normal;
   }
 
+  #box {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   #alert {
     opacity: 0;
     transition: opacity 0.7s linear;
@@ -25,16 +34,28 @@
     opacity: 1;
   }
 
+  .messageBox {
+    font-family: Munro-Small;
+    font-size: 56px;
+    text-shadow: 0px 0px 5px black;
+    color: white;
+    position: relative;
+    top: -140px;
+    text-align: center;
+  }
+
 </style>
 <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
 </head>
 
 <body>
-<div id="box" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-  <div id="alert" style="width: 33%;">
-    <div class="message" style="font-family: Munro-Small; font-size: 56px; color: white; position: relative; top: 278px; left: 50px;">test</div>
+<div id="box">
+  <div id="alert">
     <img src="donation.gif" width="640" height="360">
-    <!--<img src="donation2.gif" width="672" height="162">-->
+    <div class="messageBox">
+      <div id="boost"></div>
+      <div id="message"></div>
+    </div>
   </div>
 </div>
 
@@ -71,10 +92,12 @@
       break
   }
 
-  const showBoost = (message) => {
+  const showBoost = (boost, message) => {
 
     alert.classList.add("show")
-    alert.querySelector(".message").textContent = message
+
+    alert.querySelector("#boost").textContent = boost
+    alert.querySelector("#message").textContent = message || ""
 
     setTimeout(() => {
       alert.classList.remove("show")
@@ -100,13 +123,11 @@ window.showBoost = showBoost
             return
           }
 
-          if (boost.message) {
-            showBoost(`${boost.message} - ${boost.sender_name}`)
-          }
-          else {
-            const sats = Math.floor(boost.value_msat_total / 1000)
-            showBoost(`${sats} from ${boost.sender_name}`)
-          }
+          const sats = Math.floor(boost.value_msat_total / 1000)
+
+          showBoost(
+            `${sats} from ${boost.sender_name}`, boost.message
+          )
 
           return
         }
@@ -116,7 +137,6 @@ window.showBoost = showBoost
         }
 
         timer = setTimeout(() => {
-          console.log("is old off")
           isOld = false
         }, 1000)
       },
