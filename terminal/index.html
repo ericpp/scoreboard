@@ -227,9 +227,14 @@ function LatestPayment(el) {
         const sats = this.current.sats.toLocaleString()
         const boostzap = (this.current.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
         const app = (this.current.type == 'boost' ? `FROM ${this.current.app_name}` : '')
+        let band = '';
+
+        if (this.current.app_name == "The Split Kit" && this.current.podcast.indexOf('Satellite Skirmish') === -1) {
+            band = `FOR ${this.current.podcast}` // split kit passes the band in the podcast name
+        }
 
         let message = document.createElement("div")
-        message.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()))
+        message.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${band} ${app}`.toUpperCase()))
 
         if (this.current.message) {
             message.appendChild(document.createElement("br"))
@@ -360,9 +365,14 @@ function NewPayments(el, displayTime) {
         const sats = payment.sats.toLocaleString()
         const boostzap = (payment.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
         const app = (payment.type == 'boost' ? `FROM ${payment.app_name}` : '')
+        let band = '';
+
+        if (this.current.app_name == "The Split Kit" && this.current.podcast.indexOf('Satellite Skirmish') === -1) {
+            band = `FOR ${this.current.podcast}` // split kit passes the band in the podcast name
+        }
 
         const div = document.createElement("div")
-        div.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()))
+        div.appendChild(document.createTextNode(`${sender} ${boostzap} ${sats} SATS ${band} ${app}`.toUpperCase()))
 
         if (payment.message) {
             div.appendChild(document.createElement("br"))
