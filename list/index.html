@@ -7,8 +7,23 @@
     color: white;
     font-size: 24px;
   }
+
+  li {
+    margin: 0.5em 0;
+    transition: color 2s 0s;
+  }
+
+  li.added {
+    color: #ff0;
+  }
+
+  li small {
+    color: #999;
+  }
+
 </style>
 <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
 </head>
 
 <body>
@@ -19,45 +34,68 @@
 </ul>
 
 <script>
-(() => {
-  const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
-  const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
-  let nostrPool
 
-  const list = document.getElementById("list")
+document.addEventListener('DOMContentLoaded', () => {
+    let app = new PaymentTracker()
 
-  async function initNostr() {
-    nostrPool = new NostrTools.SimplePool()
+    app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
 
-    nostrPool.subscribeMany(nostrRelays, [{authors: [nostrBoostPkey]}], {
-      onevent(event) {
-        let invoice = JSON.parse(event.content)
-        const boost = invoice.boostagram
+    let params = (new URL(document.location)).searchParams
 
+    app.setFilter('after', params.get("after") || "2024-06-24 00:00:00 -0500")
+    app.setFilter('before', params.get("before"))
+
+    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew"])
+
+    const addBoost = (boost, old) => {
         if (boost.action != "boost") {
-          return
+            return
         }
 
-        const sats = Math.floor(boost.value_msat_total / 1000)
-        let message = `${boost.podcast} - ${sats} sats from ${boost.sender_name}`
+        let beforeItem = null
+
+        for (let item of list.children) {
+            if (boost.creation_date > item.getAttribute('data-timestamp')) {
+              beforeItem = item
+              break
+            }
+        }
+
+        let message = `${boost.sender_name} boosted ${boost.sats} sats`
 
         if (boost.message) {
-          message += `: ${boost.message}`
+          message += ` saying "${boost.message}"`
         }
 
+        let date = new Date(boost.creation_date * 1000)
+
+        description = `${date.toLocaleString()} - ${boost.podcast}`
+
         const li = document.createElement("li")
+        li.classList.add("added")
+        li.setAttribute('data-timestamp', boost.creation_date)
         li.appendChild(document.createTextNode(message))
-        list.insertBefore(li, list.firstChild)
-      },
-      oneose() {
-        // h.close()
-      }
-    })
-  }
+        li.appendChild(document.createElement('br'))
 
-  initNostr()
+        const small = document.createElement("small")
+        small.appendChild(document.createTextNode(description))
+        li.appendChild(small)
 
-})()
+        if (beforeItem) {
+            list.insertBefore(li, beforeItem)
+        }
+        else {
+            list.appendChild(li)
+        }
+
+        setTimeout(() => li.classList.remove("added"), 10)
+
+    }
+
+    app.setListener(addBoost)
+
+    app.start()
+})
 
 </script>
 </body>
