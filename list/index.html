@@ -8,13 +8,22 @@
     font-size: 24px;
   }
 
+  ul {
+    list-style: none;
+  }
+
   li {
     margin: 0.5em 0;
-    transition: color 2s 0s;
+    transition: color 1s 0s;
+    cursor: pointer;
   }
 
   li.added {
     color: #ff0;
+  }
+
+  li.highlight {
+    background-color: #333;
   }
 
   li small {
@@ -88,8 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
             list.appendChild(li)
         }
 
-        setTimeout(() => li.classList.remove("added"), 10)
+        li.addEventListener("click", () => {
+            [...list.children].forEach((item) => {
+                item.classList.remove("highlight")
+            })
 
+            li.classList.add("highlight")
+        })
+
+        setTimeout(() => li.classList.remove("added"), 1)
     }
 
     app.setListener(addBoost)
