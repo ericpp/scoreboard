@@ -367,8 +367,8 @@ function NewPayments(el, displayTime) {
         const app = (payment.type == 'boost' ? `FROM ${payment.app_name}` : '')
         let band = '';
 
-        if (this.current.app_name == "The Split Kit" && this.current.podcast.indexOf('Satellite Skirmish') === -1) {
-            band = `FOR ${this.current.podcast}` // split kit passes the band in the podcast name
+        if (payment.app_name == "The Split Kit" && payment.podcast.indexOf('Satellite Skirmish') === -1) {
+            band = `FOR ${payment.podcast}` // split kit passes the band in the podcast name
         }
 
         const div = document.createElement("div")
