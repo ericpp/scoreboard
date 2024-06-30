@@ -72,6 +72,7 @@
 
   const params = (new URL(document.location)).searchParams
   const pos = params.get("pos") || "tm"
+  const test = params.get("test") || ""
 
   const box = document.getElementById("box")
   const alert = document.getElementById("alert")
@@ -152,6 +153,10 @@
         // h.close()
       }
     })
+  }
+
+  if (test != "") {
+    showBoost(`100 SATS FROM TEST`, `TEST BOOST!`)
   }
 
   initBoostQueue()
