@@ -68,6 +68,7 @@
   let nostrPool
   const nostrNames = {};
   const nostrNameQueue = {};
+  const boostQueue = []
 
   const params = (new URL(document.location)).searchParams
   const pos = params.get("pos") || "tm"
@@ -104,8 +105,19 @@
       alert.classList.remove("show")
     }, 5000)
   }
-window.showBoost = showBoost
 
+  const initBoostQueue = () => {
+    setInterval(() => {
+      if (boostQueue.length === 0 || alert.classList.contains("show")) {
+        return
+      }
+
+      const boost = boostQueue.shift()
+      const sats = Math.floor(boost.value_msat_total / 1000)
+
+      showBoost(`${sats} from ${boost.sender_name}`, boost.message)
+    }, 1000)
+  }
 
   async function initNostr() {
     nostrPool = new NostrTools.SimplePool()
@@ -124,12 +136,7 @@ window.showBoost = showBoost
             return
           }
 
-          const sats = Math.floor(boost.value_msat_total / 1000)
-
-          showBoost(
-            `${sats} from ${boost.sender_name}`, boost.message
-          )
-
+          boostQueue.push(boost);
           return
         }
 
@@ -147,7 +154,11 @@ window.showBoost = showBoost
     })
   }
 
+  initBoostQueue()
   initNostr()
+
+window.showBoost = showBoost
+window.boostQueue = boostQueue
 
 })()
 
