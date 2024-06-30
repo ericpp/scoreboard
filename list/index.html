@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        let message = `${boost.sender_name} boosted ${boost.sats} sats`
+        let message = `${boost.sender_name} boosted ${boost.sats} sats from ${boost.app_name}`
 
         if (boost.message) {
           message += ` saying "${boost.message}"`
