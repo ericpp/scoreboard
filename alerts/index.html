@@ -96,11 +96,10 @@
   }
 
   const showBoost = (boost, message) => {
-
     alert.classList.add("show")
 
     alert.querySelector("#boost").textContent = boost
-    alert.querySelector("#message").textContent = message || ""
+    // alert.querySelector("#message").textContent = message || ""
 
     setTimeout(() => {
       alert.classList.remove("show")
