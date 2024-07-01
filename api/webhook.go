@@ -51,6 +51,11 @@ func SaveToDatabase(boost IncomingBoost) error {
 
     var tlv map[string]interface{} = boost.Boostagram.(map[string]interface{})
 
+    action := ""
+    if val, ok := tlv["action"].(string); ok {
+        action = val
+    }
+
     podcast := ""
     if val, ok := tlv["podcast"].(string); ok {
         podcast = val
@@ -103,9 +108,9 @@ func SaveToDatabase(boost IncomingBoost) error {
 
     insertSql :=
     `INSERT INTO invoices
-        (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid)
+        (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action)
     VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     ON CONFLICT (identifier) DO NOTHING`
 
     _, err = db.Exec(
@@ -126,6 +131,7 @@ func SaveToDatabase(boost IncomingBoost) error {
         itemID,
         guid,
         episode_guid,
+        action,
     )
 
     if err != nil {
