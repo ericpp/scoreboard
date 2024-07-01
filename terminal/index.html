@@ -390,6 +390,33 @@ function NewPayments(el, displayTime) {
     }
 }
 
+let boosts = []
+
+function downloadCsv() {
+const csv = arrayToCsv(boosts)
+console.log(csv)
+  // Create a blob
+  var blob = new Blob([boosts], { type: "text/csv" });
+  var url = URL.createObjectURL(blob);
+
+  // Create a link to download it
+  var pom = document.createElement('a');
+  pom.href = url;
+  pom.setAttribute('download', 'boosts.csv');
+  pom.click();
+}
+
+function arrayToCsv(data){
+  return data.map(row =>
+    row
+    .map(String)  // convert every value to String
+    .map(v => v.replaceAll('"', '""'))  // escape double quotes
+    .map(v => `"${v}"`)  // quote it
+    .join(',')  // comma-separated
+  ).join('\r\n');  // rows starting on new lines
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     const scoreSlots = 5
     const displayTime = 3000
@@ -409,16 +436,29 @@ document.addEventListener('DOMContentLoaded', () => {
     app.setFilter('after', params.get("after") || "2024-06-24 00:00:00 -0500")
     app.setFilter('before', params.get("before"))
 
-    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew"])
+    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
 
     app.setListener((payment, old) => {
+
+boosts.push([
+    payment.action,
+    payment.app_name,
+    payment.creation_date,
+    payment.identifier,
+    payment.message,
+    payment.podcast,
+    payment.sats,
+    payment.sender_name,
+    payment.type,
+])
+
         latestBoost.add(payment, old)
         topBoosters.add(payment, old)
         topApps.add(payment, old)
         totalSats.add(payment, old)
         newPayments.add(payment, old)
     })
-
+window.newPayments = newPayments;
     app.start()
 })
 
@@ -463,6 +503,9 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
   </div>
+
+
+<a href="#" onclick="downloadCsv()">CSV</a>
 </div>
 </body>
 </html>
