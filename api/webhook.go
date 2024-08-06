@@ -221,6 +221,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    log.Printf("incoming webhook %s", payload)
+
     var transaction map[string]interface{}
 
     if err := json.Unmarshal([]byte(payload), &transaction); err != nil {
