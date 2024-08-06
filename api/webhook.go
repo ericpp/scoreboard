@@ -17,16 +17,18 @@ import (
     _ "github.com/lib/pq"
 )
 
-type IncomingBoost struct {
+type IncomingInvoice struct {
     Amount           float64      `json:"amount"`
     Boostagram       interface{}  `json:"boostagram"`
     CreatedAt        string       `json:"created_at"`
     CreationDate     float64      `json:"creation_date"`
+    Description      string       `json:"description"`
     Identifier       string       `json:"identifier"`
+    PayerName        string       `json:"payer_name"`
     Value            float64      `json:"value"`
 }
 
-func SaveToDatabase(boost IncomingBoost) error {
+func SaveToDatabase(invoice IncomingInvoice) error {
     // open database
     db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
     if err != nil {
@@ -41,15 +43,19 @@ func SaveToDatabase(boost IncomingBoost) error {
         return err
     }
 
-    log.Printf("inserting %s", boost.Identifier)
+    log.Printf("inserting %s", invoice.Identifier)
 
-    boostagram, err := json.Marshal(boost.Boostagram)
+    boostagram, err := json.Marshal(invoice.Boostagram)
 
     if err != nil {
         return err
     }
 
-    var tlv map[string]interface{} = boost.Boostagram.(map[string]interface{})
+    var tlv map[string]interface{}
+
+    if invoice.Boostagram != nil {
+        tlv = invoice.Boostagram.(map[string]interface{})
+    }
 
     action := ""
     if val, ok := tlv["action"].(string); ok {
@@ -108,19 +114,21 @@ func SaveToDatabase(boost IncomingBoost) error {
 
     insertSql :=
     `INSERT INTO invoices
-        (amount, boostagram, created_at, creation_date, identifier, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action)
+        (amount, boostagram, created_at, creation_date, description, identifier, payer_name, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action)
     VALUES
         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     ON CONFLICT (identifier) DO NOTHING`
 
     _, err = db.Exec(
         insertSql,
-        boost.Amount,
+        invoice.Amount,
         boostagram,
-        boost.CreatedAt,
-        boost.CreationDate,
-        boost.Identifier,
-        boost.Value,
+        invoice.CreatedAt,
+        invoice.CreationDate,
+        invoice.Description,
+        invoice.Identifier,
+        invoice.PayerName,
+        invoice.Value,
         podcast,
         episode,
         app_name,
@@ -141,8 +149,8 @@ func SaveToDatabase(boost IncomingBoost) error {
     return nil
 }
 
-func PublishToNostr(boost IncomingBoost) error {
-    js, err := json.Marshal(boost);
+func PublishToNostr(invoice IncomingInvoice) error {
+    js, err := json.Marshal(invoice);
 
     if err != nil {
         return err
@@ -221,20 +229,22 @@ func Handler(w http.ResponseWriter, r *http.Request) {
         os.Exit(1)
     }
 
-    boost := IncomingBoost{
+    invoice := IncomingInvoice{
         Amount: transaction["amount"].(float64),
         Boostagram: transaction["boostagram"],
         CreatedAt: transaction["created_at"].(string),
         CreationDate: transaction["creation_date"].(float64),
+        Description: transaction["description"].(string),
         Identifier: transaction["identifier"].(string),
+        PayerName: transaction["payer_name"].(string),
         Value: transaction["value"].(float64),
     }
 
-    if err := SaveToDatabase(boost); err != nil {
+    if err := SaveToDatabase(invoice); err != nil {
         log.Fatal(err)
     }
 
-    if err := PublishToNostr(boost); err != nil {
+    if err := PublishToNostr(invoice); err != nil {
         log.Fatal(err)
     }
 
