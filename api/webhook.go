@@ -116,7 +116,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
     `INSERT INTO invoices
         (amount, boostagram, created_at, creation_date, description, identifier, payer_name, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action)
     VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
     ON CONFLICT (identifier) DO NOTHING`
 
     _, err = db.Exec(
