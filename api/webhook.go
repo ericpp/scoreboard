@@ -229,14 +229,24 @@ func Handler(w http.ResponseWriter, r *http.Request) {
         os.Exit(1)
     }
 
+    description := ""
+    if val, ok := transaction["description"].(string); ok {
+        description = val
+    }
+
+    payer_name := ""
+    if val, ok := transaction["payer_name"].(string); ok {
+        payer_name = val
+    }
+
     invoice := IncomingInvoice{
         Amount: transaction["amount"].(float64),
         Boostagram: transaction["boostagram"],
         CreatedAt: transaction["created_at"].(string),
         CreationDate: transaction["creation_date"].(float64),
-        Description: transaction["description"].(string),
+        Description: description,
         Identifier: transaction["identifier"].(string),
-        PayerName: transaction["payer_name"].(string),
+        PayerName: payer_name,
         Value: transaction["value"].(float64),
     }
 
