@@ -48,7 +48,7 @@ function setup(){
     // apply filters specified in page url
     paymentTracker.setFilter("podcast", params.get("podcast"))
     paymentTracker.setFilter("after", params.get("after") || "2024-04-06 15:00:00 -0500")
-    paymentTracker.setFilter("before", params.get("before")) // || "2024-04-08 00:00:00 -0500"
+    paymentTracker.setFilter("before", params.get("before") || "2024-04-13 15:00:00 -0500")
 
     paymentTracker.setFilter("excludePodcasts", ["Podcasting 2.0", "Pew Pew"])
 
