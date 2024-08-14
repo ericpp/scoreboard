@@ -131,6 +131,10 @@ function NostrWatcher(relays) {
                     }, 5000)
                 }
 
+                if (!invoice.boostagram) {
+                    return
+                }
+
                 const boost = invoice.boostagram
 
                 callback({
@@ -293,6 +297,10 @@ function StoredBoosts() {
             lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
 
             boosts.forEach(invoice => {
+                if (!invoice.boostagram) {
+                    return
+                }
+
                 const boost = invoice.boostagram
 
                 callback({
