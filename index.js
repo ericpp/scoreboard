@@ -50,7 +50,7 @@ function setup(){
     paymentTracker.setFilter("after", params.get("after") || "2024-04-06 15:00:00 -0500")
     paymentTracker.setFilter("before", params.get("before") || "2024-04-13 15:00:00 -0500")
 
-    paymentTracker.setFilter("excludePodcasts", ["Podcasting 2.0", "Pew Pew"])
+    paymentTracker.setFilter("excludePodcasts", ["Podcasting 2.0", "Pew Pew", "Bands at Bitcoin"])
 
     scoreTracker = new ScoreTracker(producerScores, appScores, topCounters, lastPayment, newPayments)
 
