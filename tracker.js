@@ -2,9 +2,6 @@
 function PaymentTracker() {
     const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
 
-    this.storedBoosts = new StoredBoosts()
-    this.nostrWatcher = new NostrWatcher(nostrRelays)
-
     this.filters = {}
     this.identifiers = []
     this.listener = null
@@ -14,16 +11,19 @@ function PaymentTracker() {
     this.nostrBoostPkey = null
     this.nostrZapEvent = null
 
+    this.storedBoosts = new StoredBoosts(this.filters)
+    this.nostrWatcher = new NostrWatcher(nostrRelays)
+
     this.setFilter = (name, value) => {
         if ((name == 'before' || name == 'after') && typeof(value) != "number") {
             value = Math.floor(new Date(value) / 1000)
         }
 
-        this.filters[name] = value
-
         if (name == 'after') {
             this.lastBoostAt = value
         }
+
+        this.filters[name] = value
     }
 
     this.loadBoosts = (shouldLoad) => {
@@ -44,7 +44,7 @@ function PaymentTracker() {
 
     this.start = async () => {
         if (this.loadBoosts) {
-            await this.storedBoosts.load(this.lastBoostAt, (item, old) => {
+            await this.storedBoosts.load((item, old) => {
                 this.add(item, old)
             })
         }
@@ -271,20 +271,30 @@ function NostrWatcher(relays) {
     }, 1000)
 }
 
-function StoredBoosts() {
+function StoredBoosts(filters) {
 
-    this.load = async (after, callback) => {
+    this.filters = filters || {}
+
+    this.load = async (callback) => {
         let page = 1
         let items = 1000
         let lastBoostAt = null
+
+        if (filters.after) {
+            lastBoostAt = filters.after
+        }
 
         while (true) {
             const query = new URLSearchParams()
             query.set("page", page)
             query.set("items", items)
 
-            if (after) {
-                query.set("created_at_gt", after)
+            if (filters.before) {
+                query.set("created_at_lt", filters.before)
+            }
+
+            if (filters.after) {
+                query.set("created_at_gt", filters.after)
             }
 
             const result = await fetch(`https://boostboard.vercel.app/api/boosts?${query}`)
