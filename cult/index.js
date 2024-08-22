@@ -30,9 +30,15 @@ const nostrZapEvent = "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc0609
 const excludePodcasts = ["Podcasting 2.0", "Pew Pew", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1"]
 
 const backgroundColor = [0, 0, 64]
+
 const headerColor = [255, 0, 255]
+const headerShadow = [60, 0, 60]
+
 const textColor = [0, 255, 255]
-const counterColor = [255, 255, 255]
+const textShadow = [0, 60, 60]
+
+const counterColor = [255, 255, 0]
+const counterShadow = [60, 60, 0]
 
 function setup(){
     stars = new Stars(numstars)
@@ -174,7 +180,7 @@ function SatCounter(title) {
         push()
 
         fill(...headerColor)
-        stroke(60, 0, 0)
+        stroke(...headerShadow)
         textAlign(CENTER)
 
         y += textSize()
@@ -182,7 +188,7 @@ function SatCounter(title) {
         y += textSize()
 
         fill(...counterColor)
-        stroke(60, 60, 60)
+        stroke(...counterShadow)
         text(this.drawTotal.toLocaleString(), x, y, width)
         y += 2 * textSize()
 
@@ -263,18 +269,18 @@ function NewPayments() {
 
         if (this.current.message) {
             fill(...textColor)
-            stroke(0, 60, 60)
+            stroke(...textShadow)
             boxedText(info, x, y, width, 2 * textSize())
             y += 3 * textSize()
 
             fill(...counterColor)
-            stroke(60, 60, 60)
+            stroke(...counterShadow)
 
             boxedText(this.current.message, x, y, width, windowHeight - y - 200)
         }
         else {
             fill(...counterColor)
-            stroke(60, 60, 60)
+            stroke(...counterShadow)
             boxedText(info, x, y, width, windowHeight - y - 200)
         }
 
@@ -306,7 +312,7 @@ function LastPayment() {
         push()
 
         fill(...textColor)
-        stroke(0, 60, 60)
+        stroke(...textShadow)
         textAlign(CENTER)
 
         const sender = this.current.sender_name
@@ -379,14 +385,14 @@ function Scoreboard(title, scores) {
 
         textAlign(CENTER)
         fill(...headerColor)
-        stroke(60, 0, 0)
+        stroke(...headerShadow)
 
         text(this.title, 0, y, windowWidth)
         y +=  1.5 * fontSize
 
         textAlign(RIGHT)
         fill(...textColor)
-        stroke(0, 60, 60)
+        stroke(...textShadow)
         text("SCORE", x + (width/2.5), y, 0)
         text("NAME", x, y, width)
 
@@ -429,12 +435,12 @@ function TopScore(position, name, sats) {
         push()
 
         fill(...textColor)
-        stroke(0, 60, 60)
+        stroke(...textShadow)
 
         if (this.updated > 0) {
             if (Math.floor(this.updated / 10) % 2 === 0) {
                 fill(...counterColor)
-                stroke(60, 60, 60)
+                stroke(...counterShadow)
             }
 
             this.updated--
