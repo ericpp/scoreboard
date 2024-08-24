@@ -112,24 +112,13 @@ function NostrWatcher(relays) {
     this.nostrRelays = relays
 
     this.subscribeBoosts = (nostrPubkey, callback) => {
-        let isOld = true
-        let isOldTimeout = null
-        let self = this
+        let gotEose = false
 
         this.nostrPool.subscribeMany(this.nostrRelays, [{authors: [nostrPubkey]}], {
             onevent(event) {
+                const isOld = !gotEose
+
                 invoice = JSON.parse(event.content)
-
-                if (isOldTimeout) {
-                    clearTimeout(isOldTimeout)
-                }
-
-                if (isOld) {
-                    // turn off isOld after 5 seconds of inactivity
-                    isOldTimeout = setTimeout(() => {
-                        isOld = false
-                    }, 5000)
-                }
 
                 if (!invoice.boostagram) {
                     return
@@ -149,29 +138,19 @@ function NostrWatcher(relays) {
                     message: boost.message,
                 }, isOld)
             },
-            oneose() {
-                // h.close()
+            oneose() { // end of stored events
+                gotEose = true
             }
         })
     }
 
     this.subscribeZaps = (nostrEvent, callback) => {
-        let isOld = true
-        let isOldTimeout = null
+        let gotEose = false
         let self = this
 
         this.nostrPool.subscribeMany(this.nostrRelays, [{'#a': [nostrEvent], 'kinds': [9735]}], {
             async onevent(event) {
-                if (isOldTimeout) {
-                    clearTimeout(isOldTimeout)
-                }
-
-                if (isOld) {
-                    // turn off isOld after 5 seconds of inactivity
-                    isOldTimeout = setTimeout(() => {
-                        isOld = false
-                    }, 5000)
-                }
+                const isOld = !gotEose
 
                 // convert tags array into an object
                 const tags = event.tags.reduce((result, tag) => {
@@ -203,8 +182,8 @@ function NostrWatcher(relays) {
                     message: event.content,
                 }, isOld)
             },
-            oneose() {
-                // h.close()
+            oneose() {// end of stored events
+                gotEose = true
             }
         })
     }
