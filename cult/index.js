@@ -47,6 +47,7 @@ function setup(){
     newPayments = new NewPayments()
     lastPayment = new LastPayment()
     topCounters = new TopCounters()
+    boostsList = new BoostsList()
 
     let params = (new URL(document.location)).searchParams
 
@@ -66,6 +67,7 @@ function setup(){
 
     paymentTracker.setListener((payment, old) => {
         scoreTracker.add(payment, old)
+        boostsList.add(payment)
     })
 
     paymentTracker.start()
@@ -519,28 +521,64 @@ function Star(top){
     }
 }
 
-function bech32_to_hex(str) {
-    let grammar = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
-    let idx = 0;
-    let hex = "";
+function BoostsList() {
+    this.el = document.getElementById('list')
 
-    // remove prefix
-    str = str.replace(/^\w+1(.+)$/, '$1')
+    document.querySelectorAll('.toggle-list').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const div = document.querySelector('.boost-list')
+            div.style.display = (div.style.display == 'none' ? '' : 'none')
+        })
+    })
 
-    // remove checksum (to-do later)
-    str = str.replace(/^(.+?).{6}$/, '$1')
+    this.add = (boost) => {
+        let beforeItem = null
 
-    // convert to hex
-    while (idx < str.length) {
-        let word = 0;
-console.log(idx, str[idx], str[idx+1], str[idx+2], str[idx+3])
-        word += grammar.indexOf(str[idx++]) << 15
-        word += grammar.indexOf(str[idx++]) << 10
-        word += grammar.indexOf(str[idx++]) << 5
-        word += grammar.indexOf(str[idx++])
-        hex += word.toString(16);
-console.log(word, word.toString(16), hex)
+        for (let item of this.el.children) {
+            if (boost.creation_date > item.getAttribute('data-timestamp')) {
+              beforeItem = item
+              break
+            }
+        }
+
+        const boostzap = (boost.type == 'boost' ? 'boosted' : 'zapped')
+
+        let message = `${boost.sender_name} ${boostzap} ${boost.sats} sats from ${boost.app_name}`
+
+        if (boost.message) {
+          message += ` saying "${boost.message}"`
+        }
+
+        let date = new Date(boost.creation_date * 1000)
+
+        description = `${date.toLocaleString()} - ${boost.podcast}`
+
+        const li = document.createElement("li")
+        li.classList.add("added")
+        li.setAttribute('data-timestamp', boost.creation_date)
+        li.appendChild(document.createTextNode(message))
+        li.appendChild(document.createElement('br'))
+
+        const small = document.createElement("small")
+        small.appendChild(document.createTextNode(description))
+        li.appendChild(small)
+
+        if (beforeItem) {
+            list.insertBefore(li, beforeItem)
+        }
+        else {
+            list.appendChild(li)
+        }
+
+        li.addEventListener("click", () => {
+            [...list.children].forEach((item) => {
+                item.classList.remove("highlight")
+            })
+
+            li.classList.add("highlight")
+        })
+
+        setTimeout(() => li.classList.remove("added"), 1)
     }
 
-    return hex;
 }

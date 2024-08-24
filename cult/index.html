@@ -9,12 +9,86 @@
     body {
         padding: 0; margin: 0;
     }
+    .boost-menu {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        margin-bottom: 3rem;
+        margin-right: 2rem;
+        font-family: Joystix, monospace;
+        font-size: 200%;
+    }
+    .boost-menu a {
+        border: 1px solid #009;
+        color: #009;
+        border-radius: 5px;
+        text-decoration: none;
+        padding: 0.85rem;
+    }
+    .boost-menu a:hover {
+        border: 1px solid #fff;
+        color: #fff;
+    }
+
+    .boost-list {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 3rem;
+        margin-left: 10%;
+        margin-right: 10%;
+        font-family: Joystix, monospace;
+        font-size: 200%;
+        border: 1px solid #0ff;
+        color: #0ff;
+        border-radius: 5px;
+        background-color: #007;
+        padding: 2rem;
+        padding-right: 1rem;
+    }
+
+    .boost-list a {
+        color: #0ff;
+        text-decoration: none;
+        float: right;
+    }
+
+    #list {
+        list-style: none;
+        padding-left: 0;
+        overflow: auto;
+        overflow-wrap: break-word;
+        height: 95%;
+        scrollbar-color: #0ff #005;
+        margin: 0;
+    }
+
+    #list li {
+        margin-top: 2rem;
+        color: #ff0;
+    }
+
+    #list li small {
+        color: #f0f;
+    }
+
     </style>
 
     <script src="../tracker.js"></script>
     <script src="index.js"></script>
 </head>
 <body>
+    <div class="boost-menu">
+        <a class="toggle-list" href="#">=</a>
+    </div>
+    <div class="boost-list" style="display: none">
+        <a class="toggle-list" href="#">X</a>
+        BOOSTS
+        <ul id="list">
+        </ul>
+    </div>
 
 </body>
 </html>
