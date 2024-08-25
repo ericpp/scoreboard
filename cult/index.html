@@ -6,25 +6,98 @@
     <link href="https://fonts.cdnfonts.com/css/joystix" rel="stylesheet">
     <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
     <style>
-    body {
-        padding: 0; margin: 0;
+
+    html {
+        font-family: Joystix, monospace;
+        font-size: 100%;
     }
+
+    body {
+        color: #0ff;
+        padding: 0;
+        margin: 0;
+    }
+
+    .header {
+        color: #f0f;
+        text-align: center;
+    }
+
+    .highlight {
+        color: #ff0;
+        text-align: center;
+    }
+
+    .board {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .board table th,
+    .board table td {
+        font-size: 100%
+    }
+
+    .board > div {
+        margin-top: 1rem;
+    }
+
+    .top-scores {
+        display: flex;
+        justify-content: space-between;
+        text-align: center;
+    }
+
+    .top-scores .header {
+        width: 10rem;
+    }
+
+    .leaderboard {
+        width: 100%;
+    }
+
+    .last-boost {
+        text-align: center;
+    }
+
+    .new-boost {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        margin-top: 1rem;
+    }
+
+    .new-boost .title {
+        font-size: 250%;
+    }
+
+    .new-boost .message {
+        margin-top: 2rem;
+        color: #ff0;
+        font-size: 500%;
+        overflow-wrap: break-word;
+    }
+
     .boost-menu {
         position: absolute;
         bottom: 0;
         right: 0;
         margin-bottom: 3rem;
         margin-right: 2rem;
-        font-family: Joystix, monospace;
-        font-size: 200%;
     }
+
     .boost-menu a {
-        border: 1px solid #009;
-        color: #009;
+        border: 1px solid #f0f;
+        color: #f0f;
         border-radius: 5px;
         text-decoration: none;
         padding: 0.85rem;
     }
+
     .boost-menu a:hover {
         border: 1px solid #fff;
         color: #fff;
@@ -39,14 +112,12 @@
         margin: 3rem;
         margin-left: 10%;
         margin-right: 10%;
-        font-family: Joystix, monospace;
-        font-size: 200%;
         border: 1px solid #0ff;
         color: #0ff;
         border-radius: 5px;
         background-color: #007;
-        padding: 2rem;
-        padding-right: 1rem;
+        padding: 1rem;
+        padding-right: 0.5rem;
     }
 
     .boost-list a {
@@ -66,17 +137,34 @@
     }
 
     #list li {
-        margin-top: 2rem;
+        margin-top: 1rem;
         color: #ff0;
         cursor: pointer;
     }
 
-    #list li.highlight {
+    #list li.selected {
         background-color: #00b;
     }
 
     #list li small {
         color: #f0f;
+    }
+
+    @media (min-width: 1280px) {
+        .board {
+            margin-left: 10%;
+            margin-right: 10%;
+        }
+    }
+
+    @media (min-width: 768px) {
+        html {
+            font-size: 240%;
+        }
+        .board table th,
+        .board table td {
+            font-size: 240%
+        }
     }
 
     </style>
@@ -85,12 +173,71 @@
     <script src="index.js"></script>
 </head>
 <body>
+    <div class="board">
+        <div class="top-scores">
+            <div class="top-boosts">
+                <div class="header">BOOSTS</div>
+                <div class="figure highlight"></div>
+            </div>
+            <div class="total-sats">
+                <div class="header">TOTAL SATS</div>
+                <div class="figure highlight"></div>
+            </div>
+            <div class="top-zaps">
+                <div class="header">ZAPS</div>
+                <div class="figure highlight"></div>
+            </div>
+        </div>
+
+        <div class="last-boost">
+            <div class="booster"></div>
+            <div class="message highlight"></div>
+        </div>
+
+        <div class="top-producers">
+            <div class="header" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">- TOP PRODUCERS -</div>
+            <table style="width: 100%">
+                <thead>
+                    <tr>
+                        <td style="width: 1rem;">&nbsp;</td>
+                        <td style="text-align: right; width: 12rem;">SCORE</td>
+                        <td style="text-align: right">NAME</td>
+                    </tr>
+                </thead>
+                <tbody class="scores">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="top-apps">
+            <div class="header" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">- TOP APPS -</div>
+            <table style="width: 100%">
+                <thead>
+                    <tr>
+                        <td style="width: 1rem;">&nbsp;</td>
+                        <td style="text-align: right; width: 12rem;">SCORE</td>
+                        <td style="text-align: right">NAME</td>
+                    </tr>
+                </thead>
+                <tbody class="scores">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="new-boost">
+        <div class="title"></div>
+        <div class="message"></div>
+    </div>
+
     <div class="boost-menu">
         <a class="toggle-list" href="#">=</a>
     </div>
+
     <div class="boost-list" style="display: none">
         <a class="toggle-list" href="#">X</a>
         PRODUCERS
+
         <ul id="list">
         </ul>
     </div>

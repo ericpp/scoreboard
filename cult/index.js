@@ -27,7 +27,7 @@ let pollInterval = 10000
 
 const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
 const nostrZapEvent = "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1712441602"
-const excludePodcasts = ["Podcasting 2.0", "Pew Pew", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1"]
+const excludePodcasts = ["Podcasting 2.0", "Bands at Bitcoin", "Pew Pew", "Day 3", "Day 2", "Day 1"]
 
 const backgroundColor = [0, 0, 64]
 
@@ -42,12 +42,15 @@ const counterShadow = [60, 60, 0]
 
 function setup(){
     stars = new Stars(numstars)
-    producerScores = new Scores(5)
-    appScores = new Scores(5)
-    newPayments = new NewPayments()
-    lastPayment = new LastPayment()
+    // producerScores = new Scores(5)
+    // appScores = new Scores(5)
+    newPayments = new NewPayments('.new-boost')
+    lastPayment = new LastPayment('.last-boost')
     topCounters = new TopCounters()
     boostsList = new BoostsList()
+
+    producers = new Scoreboard('- TOP PRODUCERS -', '.top-producers')
+    apps = new Scoreboard('- TOP APPS -', '.top-apps')
 
     let params = (new URL(document.location)).searchParams
 
@@ -63,7 +66,7 @@ function setup(){
 
     paymentTracker.setFilter("excludePodcasts", excludePodcasts)
 
-    scoreTracker = new ScoreTracker(producerScores, appScores, topCounters, lastPayment, newPayments)
+    scoreTracker = new ScoreTracker(producers, apps, topCounters, lastPayment, newPayments)
 
     paymentTracker.setListener((payment, old) => {
         scoreTracker.add(payment, old)
@@ -72,8 +75,6 @@ function setup(){
 
     paymentTracker.start()
 
-    producers = new Scoreboard("- TOP PRODUCERS -", producerScores)
-    apps = new Scoreboard("- TOP STREAMS -", appScores)
 
     fontSize = windowHeight / heightToFont
     boxWidth = windowWidth / 1.5
@@ -98,26 +99,7 @@ function windowResized() {
 
 function draw(){
     background(...backgroundColor)
-
     stars.draw()
-
-    strokeWeight(8)
-
-    textSize(fontSize)
-    textFont('Joystix')
-    textAlign(CENTER)
-
-    posY = boxOffsetHeight
-    posY = topCounters.draw(boxOffsetWidth, posY, boxWidth)
-
-    if (newPayments.isDrawable()) {
-        newPayments.draw(0, posY, windowWidth)
-    }
-    else {
-        posY = lastPayment.draw(0, posY, windowWidth)
-        posY = producers.draw(boxOffsetWidth, posY, boxWidth)
-        posY = apps.draw(boxOffsetWidth, posY, boxWidth)
-    }
 }
 
 function boxedText(str, x, y, width, height) {
@@ -149,7 +131,8 @@ function ScoreTracker(producers, apps, topCounters, lastPayment, newPayments) {
 
         this.producers.add(payment.sender_name, payment.sats)
         // this.apps.add(payment.app_name || "Unknown", payment.sats)
-        this.apps.add(payment.podcast.substr(0, 20), payment.sats)
+        // this.apps.add(payment.podcast.substr(0, 20), payment.sats)
+        this.apps.add(payment.app_name || "Unknown", payment.sats)
         this.lastPayment.add(payment)
         this.topCounters.add(payment)
 
@@ -161,49 +144,62 @@ function ScoreTracker(producers, apps, topCounters, lastPayment, newPayments) {
     }
 }
 
-function SatCounter(title) {
+function SatCounter(title, el) {
     this.title = title
     this.total = 0
     this.drawTotal = 0
     this.increment = 0
+
+    this.el = document.querySelector(el)
+
+    this.countTimer = setInterval(() => {
+        this.render()
+    }, 10)
 
     this.add = (sats) => {
         this.total += sats
         this.increment = Math.floor(this.total / 240)
     }
 
-    this.draw = (x, y, width) => {
+    this.render = (container) => {
+        if (!this.el) {
+            const el = document.createElement('div')
+            el.innerHTML = `
+            <div>
+                <div class="header" style="width: 21rem">${this.title}</div>
+                <div class="figure">0</div>
+            </div>
+            `
+
+            this.el = container.appendChild(el)
+
+        }
+
         const diff = this.total - this.drawTotal
+
+        if (diff == 0) {
+            return;
+        }
 
         if (diff > 0) {
             this.drawTotal += Math.min(diff, Math.floor(random(50, this.increment)))
         }
 
-        push()
-
-        fill(...headerColor)
-        stroke(...headerShadow)
-        textAlign(CENTER)
-
-        y += textSize()
-        text(this.title, x, y, width)
-        y += textSize()
-
-        fill(...counterColor)
-        stroke(...counterShadow)
-        text(this.drawTotal.toLocaleString(), x, y, width)
-        y += 2 * textSize()
-
-        pop()
-
-        return y
+        this.el.querySelector('.figure').innerText = this.drawTotal.toLocaleString()
     }
 }
 
 function TopCounters() {
-    this.boostCounter = new SatCounter('BOOSTS')
-    this.zapCounter = new SatCounter('ZAPS')
-    this.totalCounter = new SatCounter('TOTAL SATS')
+    this.el = document.querySelector('.top-scores')
+
+    this.boostCounter = new SatCounter('BOOSTS', '.top-boosts')
+    this.boostCounter.render(this.el)
+
+    this.totalCounter = new SatCounter('TOTAL SATS', '.total-sats')
+    this.totalCounter.render(this.el)
+
+    this.zapCounter = new SatCounter('ZAPS', '.top-zaps')
+    this.zapCounter.render(this.el)
 
     this.add = (payment) => {
         if (payment.type == 'boost') {
@@ -215,21 +211,26 @@ function TopCounters() {
 
         this.totalCounter.add(payment.sats)
     }
-
-    this.draw = (x, y, width) => {
-        const indent = (width / 3) + 100
-
-        this.boostCounter.draw(x - indent, y, width)
-        this.zapCounter.draw(x + indent, y, width)
-
-        return this.totalCounter.draw(x, y, width)
-    }
 }
 
-function NewPayments() {
+function NewPayments(el) {
     this.pending = []
     this.current = null
     this.updated = 0
+    this.el = document.querySelector(el)
+
+    this.timer = setInterval(() => {
+        if (this.pending.length == 0) {
+            document.querySelector('.board').style.display = ''
+            return
+        }
+
+        document.querySelector('.board').style.display = 'none'
+
+        this.current = this.pending.shift()
+        this.render()
+
+    }, 5000)
 
     this.add = (boost) => {
         if (boost.action != 'boost' && boost.action != 'zap') {
@@ -239,29 +240,7 @@ function NewPayments() {
         this.pending.push(boost)
     }
 
-    this.isDrawable = () => {
-        return (this.updated > 0 || this.pending.length > 0)
-    }
-
-    this.draw = (x, y, width) => {
-        if (this.updated === 0 && this.pending.length === 0) {
-            return
-        }
-
-        if (this.updated === 0) {
-            this.current = this.pending.shift()
-            this.updated = Math.floor(frameRate()) * messageTime
-        }
-
-        if(this.updated > 0) {
-            this.updated--
-        }
-
-        push()
-        strokeWeight(8)
-
-        textAlign(CENTER)
-
+    this.render = () => {
         const sender = this.current.sender_name
         const sats = this.current.sats.toLocaleString()
         const boostzap = (this.current.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
@@ -270,29 +249,20 @@ function NewPayments() {
         const info = `${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()
 
         if (this.current.message) {
-            fill(...textColor)
-            stroke(...textShadow)
-            boxedText(info, x, y, width, 2 * textSize())
-            y += 3 * textSize()
-
-            fill(...counterColor)
-            stroke(...counterShadow)
-
-            boxedText(this.current.message, x, y, width, windowHeight - y - 200)
+            this.el.querySelector('.title').style.display = ''
+            this.el.querySelector('.title').innerText = info
+            this.el.querySelector('.message').innerText = this.current.message
         }
         else {
-            fill(...counterColor)
-            stroke(...counterShadow)
-            boxedText(info, x, y, width, windowHeight - y - 200)
+            this.el.querySelector('.title').style.display = 'none'
+            this.el.querySelector('.message').innerText = info
         }
-
-        pop()
-
     }
 }
 
-function LastPayment() {
+function LastPayment(el) {
     this.current = null
+    this.el = document.querySelector(el)
 
     this.add = (boost) => {
         if (this.current && this.current.creation_date > boost.creation_date) {
@@ -304,19 +274,10 @@ function LastPayment() {
         }
 
         this.current = boost
+        this.render()
     }
 
-    this.draw = (x, y, width) => {
-        if (!this.current) {
-            return y
-        }
-
-        push()
-
-        fill(...textColor)
-        stroke(...textShadow)
-        textAlign(CENTER)
-
+    this.render = () => {
         const sender = this.current.sender_name
         const sats = this.current.sats.toLocaleString()
         const boostzap = (this.current.type == 'boost' ? 'BOOSTED' : 'ZAPPED')
@@ -325,20 +286,15 @@ function LastPayment() {
         const info = `${sender} ${boostzap} ${sats} SATS ${app}`.toUpperCase()
 
         if (this.current.message) {
-            boxedText(info, x, y, width, textSize())
-            y += 1.25 * textSize()
-
-            boxedText(this.current.message.toUpperCase(), x, y, width, 2 * textSize())
-            y += 3 * textSize()
+            this.el.querySelector('.booster').innerText = info
+            this.el.querySelector('.message').innerText = this.current.message
+            this.el.querySelector('.message').style.display = ''
         }
         else {
-            boxedText(info, x, y, width, 2 * textSize())
-            y += 3 * textSize()
+            this.el.querySelector('.booster').innerText = info
+            this.el.querySelector('.message').innerText = ''
+            this.el.querySelector('.message').style.display = 'none'
         }
-
-        pop()
-
-        return y
     }
 }
 
@@ -376,41 +332,36 @@ function Scores(num) {
     }
 }
 
-function Scoreboard(title, scores) {
+function Scoreboard(title, el) {
     this.title = title
-    this.scores = scores
     this.updated = {}
     this.lastTopScores = []
+    this.scores = new Scores(5)
 
-    this.draw = function(x, y, width) {
-        push()
+    this.el = document.querySelector(el)
+    this.scoreRows = {}
 
-        textAlign(CENTER)
-        fill(...headerColor)
-        stroke(...headerShadow)
+    this.add = (name, sats) => {
+        this.scores.add(name, sats)
+        this.render()
+    }
 
-        text(this.title, 0, y, windowWidth)
-        y +=  1.5 * fontSize
-
-        textAlign(RIGHT)
-        fill(...textColor)
-        stroke(...textShadow)
-        text("SCORE", x + (width/2.5), y, 0)
-        text("NAME", x, y, width)
-
-        y += 1.5 * fontSize
-
+    this.render = () => {
         const topScores = this.scores.getTopScores()
 
         for (let idx = 0; idx < topScores.length; idx++) {
-            y = topScores[idx].draw(x, y, width)
+            if (!this.scoreRows[idx]) {
+                const el = document.createElement('tr')
+                el.innerHTML = `
+                <td class="place"></td>
+                <td class="score" style="text-align: right;"></td>
+                <td class="name" style="text-align: right;"></td>
+                `
+                this.scoreRows[idx] = this.el.querySelector('.scores').appendChild(el)
+            }
+
+            y = topScores[idx].render(this.scoreRows[idx])
         }
-
-        y += fontSize
-
-        pop()
-
-        return y
     }
 }
 
@@ -433,39 +384,16 @@ function TopScore(position, name, sats) {
         return this.updated > 0 && this.updated--
     }
 
-    this.draw = (x, y, width) => {
-        push()
-
-        fill(...textColor)
-        stroke(...textShadow)
-
-        if (this.updated > 0) {
-            if (Math.floor(this.updated / 10) % 2 === 0) {
-                fill(...counterColor)
-                stroke(...counterShadow)
-            }
-
-            this.updated--
-        }
-
+    this.render = (el) => {
         let place = ""
         if (this.position == 1) place = '1ST'
         else if (this.position == 2) place = '2ND'
         else if (this.position == 3) place = '3RD'
         else place = (this.position) + 'TH'
 
-        textAlign(LEFT)
-        text(place, x, y, width)
-
-        textAlign(RIGHT)
-        text(this.sats.toLocaleString(), x + (width/2.5), y, 0)
-        text(this.name.toUpperCase(), x, y, width)
-
-        y += 1.25 * textSize()
-
-        pop()
-
-        return y
+        el.querySelector('.place').innerText = place
+        el.querySelector('.score').innerText = this.sats.toLocaleString()
+        el.querySelector('.name').innerText = this.name.toUpperCase()
     }
 }
 
@@ -572,10 +500,10 @@ function BoostsList() {
 
         li.addEventListener("click", () => {
             [...list.children].forEach((item) => {
-                item.classList.remove("highlight")
+                item.classList.remove("selected")
             })
 
-            li.classList.add("highlight")
+            li.classList.add("selected")
         })
 
         setTimeout(() => li.classList.remove("added"), 1)
