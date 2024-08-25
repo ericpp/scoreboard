@@ -4,12 +4,50 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
     <link href="https://fonts.cdnfonts.com/css/joystix" rel="stylesheet">
+
     <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <style>
+
+    :root {
+      --root-font-size: 240%;
+    }
+
+    @media (max-width: 640px) {
+        html {
+            --root-font-size: 100% !important;
+        }
+    }
+
+    @media (min-width: 640px) {
+        @media (max-width: 768px) {
+            html {
+                --root-font-size: 125% !important;
+            }
+        }
+    }
+
+    @media (min-width: 768px) {
+        @media (max-width: 1024px) {
+            html {
+                --root-font-size: 150% !important;
+            }
+        }
+    }
+
+
+    @media (min-width: 1024px) {
+        @media (max-width: 1280px) {
+            html {
+                --root-font-size: 200% !important;
+            }
+        }
+    }
 
     html {
         font-family: Joystix, monospace;
-        font-size: 100%;
+        font-size: var(--root-font-size);
     }
 
     body {
@@ -28,6 +66,23 @@
         text-align: center;
     }
 
+    .truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 5rem;
+    }
+
+    .visible-sm {
+        display: none;
+    }
+
+    @media (min-width: 640px) {
+        .visible-sm {
+            display: unset;
+        }
+    }
+
     .board {
         position: absolute;
         top: 0;
@@ -35,9 +90,16 @@
         right: 0;
     }
 
+    @media (min-width: 1280px) {
+        .board {
+            margin-left: 10%;
+            margin-right: 10%;
+        }
+    }
+
     .board table th,
     .board table td {
-        font-size: 100%
+        font-size: var(--root-font-size);
     }
 
     .board > div {
@@ -150,23 +212,6 @@
         color: #f0f;
     }
 
-    @media (min-width: 1280px) {
-        .board {
-            margin-left: 10%;
-            margin-right: 10%;
-        }
-    }
-
-    @media (min-width: 768px) {
-        html {
-            font-size: 240%;
-        }
-        .board table th,
-        .board table td {
-            font-size: 240%
-        }
-    }
-
     </style>
 
     <script src="../tracker.js"></script>
@@ -176,16 +221,20 @@
     <div class="board">
         <div class="top-scores">
             <div class="top-boosts">
-                <div class="header">BOOSTS</div>
-                <div class="figure highlight"></div>
+                <div class="visible-sm">
+                    <div class="header">BOOSTS</div>
+                    <div class="figure highlight"></div>
+                </div>
             </div>
             <div class="total-sats">
                 <div class="header">TOTAL SATS</div>
                 <div class="figure highlight"></div>
             </div>
             <div class="top-zaps">
-                <div class="header">ZAPS</div>
-                <div class="figure highlight"></div>
+                <div class="visible-sm">
+                    <div class="header">ZAPS</div>
+                    <div class="figure highlight"></div>
+                </div>
             </div>
         </div>
 
@@ -199,9 +248,9 @@
             <table style="width: 100%">
                 <thead>
                     <tr>
-                        <td style="width: 1rem;">&nbsp;</td>
-                        <td style="text-align: right; width: 12rem;">SCORE</td>
-                        <td style="text-align: right">NAME</td>
+                        <td class="visible-sm" style="width: 1rem;">&nbsp;</td>
+                        <td style="width: 17rem;">NAME</td>
+                        <td style="text-align: right; ">SCORE</td>
                     </tr>
                 </thead>
                 <tbody class="scores">
@@ -214,9 +263,9 @@
             <table style="width: 100%">
                 <thead>
                     <tr>
-                        <td style="width: 1rem;">&nbsp;</td>
-                        <td style="text-align: right; width: 12rem;">SCORE</td>
-                        <td style="text-align: right">NAME</td>
+                        <td class="visible-sm" style="width: 1rem;">&nbsp;</td>
+                        <td style="width: 17rem;">NAME</td>
+                        <td style="text-align: right; ">SCORE</td>
                     </tr>
                 </thead>
                 <tbody class="scores">

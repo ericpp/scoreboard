@@ -353,9 +353,9 @@ function Scoreboard(title, el) {
             if (!this.scoreRows[idx]) {
                 const el = document.createElement('tr')
                 el.innerHTML = `
-                <td class="place"></td>
+                <td class="place visible-sm"></td>
+                <td class="name truncate"></td>
                 <td class="score" style="text-align: right;"></td>
-                <td class="name" style="text-align: right;"></td>
                 `
                 this.scoreRows[idx] = this.el.querySelector('.scores').appendChild(el)
             }
@@ -385,7 +385,7 @@ function TopScore(position, name, sats) {
     }
 
     this.render = (el) => {
-        let place = ""
+        let place = ''
         if (this.position == 1) place = '1ST'
         else if (this.position == 2) place = '2ND'
         else if (this.position == 3) place = '3RD'
