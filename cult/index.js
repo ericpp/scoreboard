@@ -151,6 +151,7 @@ function SatCounter(title, el) {
     this.increment = 0
 
     this.el = document.querySelector(el)
+    this.el.querySelector('.figure').innerText = '0'
 
     this.countTimer = setInterval(() => {
         this.render()
@@ -162,19 +163,6 @@ function SatCounter(title, el) {
     }
 
     this.render = (container) => {
-        if (!this.el) {
-            const el = document.createElement('div')
-            el.innerHTML = `
-            <div>
-                <div class="header" style="width: 21rem">${this.title}</div>
-                <div class="figure">0</div>
-            </div>
-            `
-
-            this.el = container.appendChild(el)
-
-        }
-
         const diff = this.total - this.drawTotal
 
         if (diff == 0) {
