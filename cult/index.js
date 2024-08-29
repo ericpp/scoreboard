@@ -210,10 +210,12 @@ function NewPayments(el) {
     this.timer = setInterval(() => {
         if (this.pending.length == 0) {
             document.querySelector('.board').style.display = ''
+            document.querySelector('.new-boost').style.display = 'none'
             return
         }
 
         document.querySelector('.board').style.display = 'none'
+        document.querySelector('.new-boost').style.display = ''
 
         this.current = this.pending.shift()
         this.render()
