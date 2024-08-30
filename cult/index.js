@@ -27,7 +27,7 @@ let pollInterval = 10000
 
 const nostrBoostPkey = "804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce"
 const nostrZapEvent = "30311:b9d02cb8fddeb191701ec0648e37ed1f6afba263e0060fc06099a62851d25e04:1712441602"
-const excludePodcasts = ["Podcasting 2.0", "Bands at Bitcoin", "Pew Pew", "Day 3", "Day 2", "Day 1"]
+const excludePodcasts = ["Podcasting 2.0", "Bands at Bitcoin", "Pew Pew", "Day 3", "Day 2", "Day 1", "Homegrown"]
 
 const backgroundColor = [0, 0, 64]
 
