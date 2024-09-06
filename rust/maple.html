@@ -1,0 +1,160 @@
+<html>
+<head>
+<title>BOOST ALERT</title>
+<style>
+  body {
+    background-color: black;
+  }
+
+  #box {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #alert {
+    opacity: 0;
+    transition: opacity 0.7s linear;
+  }
+
+  #alert.show {
+    opacity: 1;
+  }
+
+  .messageBox {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 1.75rem;
+    text-shadow: 0px 0px 5px black;
+    color: white;
+    position: relative;
+    top: -640px;
+    left: 5px;
+    text-align: center;
+    text-shadow: 0px 0px 20px black;
+    height: 360px;
+  }
+
+</style>
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+</head>
+
+<body>
+
+<div id="box">
+  <div id="alert">
+    <!-- <img src="donation.gif" width="640" height="360"> -->
+
+    <video id="background" muted playsinline width="360" height="640">
+      <source src="Maple.webm" type="video/webm">
+    </video>
+
+    <div class="messageBox">
+      <div style="display: flex; align-items: center; justify-content: center; margin-top: 350px; height: 150px;">
+        <div style="max-width: 220px; background-color: rgba(0,0,0, .7); margin-right: 5px;">
+          <div id="message"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+(() => {
+  const app = new PaymentTracker()
+  app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
+  app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
+
+  const boostQueue = []
+
+  const params = (new URL(document.location)).searchParams
+  const pos = params.get("pos") || "tm"
+  const test = params.get("test") || ""
+
+  const box = document.getElementById("box")
+  const alert = document.getElementById("alert")
+  const background = document.getElementById("background")
+
+  let playing = false
+
+  background.addEventListener("play", () => playing = true)
+  background.addEventListener("ended", () => playing = false)
+
+  switch (pos.substr(0, 1)) {
+    case "t": box.style.alignItems = "flex-start"
+      break
+    case "m": box.style.alignItems = "center"
+      break
+    case "b": box.style.alignItems = "flex-end"
+      break
+  }
+
+  switch (pos.substr(1, 1)) {
+    case "l": box.style.justifyContent = "flex-start"
+      break
+    case "m": box.style.justifyContent = "center"
+      break
+    case "r": box.style.justifyContent = "flex-end"
+      break
+  }
+
+  const showMessage = (message) => {
+    alert.classList.add("show")
+    background.play()
+
+    alert.querySelector("#message").textContent = message
+
+    // background.addEventListener("ended", () => {
+    //   alert.classList.remove("show")
+    // })
+
+    setTimeout(() => {
+      alert.classList.remove("show")
+    }, (background.duration - 2) * 1000)
+  }
+
+  const initBoostQueue = () => {
+    setInterval(() => {
+      if (boostQueue.length === 0 || playing) {
+        return
+      }
+
+      const boost = boostQueue.shift()
+      const sats = boost.sats.toLocaleString()
+
+      showMessage(`${sats} from ${boost.sender_name}`)
+    }, 1000)
+  }
+
+  app.setListener((boost, old) => {
+    if (boost.action != "boost") {
+      return
+    }
+
+    boostQueue.push(boost);
+  });
+
+  if (test != "") {
+    boostQueue.push({
+      sender_name: "Anonymous PodcastGuru User",
+      sats: 3333,
+      app_name: "Test App",
+    })
+  }
+
+  initBoostQueue()
+  app.start()
+
+window.showMessage = showMessage
+window.boostQueue = boostQueue
+
+
+})()
+
+</script>
+</body>
+</html>
