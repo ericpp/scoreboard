@@ -97,7 +97,7 @@ const alerts = [
 
   app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
   app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
-  // app.loadBoosts(false)
+  app.loadBoosts(false)
 
   const boostQueue = []
 
@@ -206,6 +206,8 @@ const alerts = [
       sats: 3333,
       app_name: "Test App",
     })
+
+    app.loadBoosts(true)
   }
 
   initBoostQueue()
