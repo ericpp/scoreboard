@@ -1,6 +1,9 @@
 <html>
 <head>
 <title>BOOST ALERT</title>
+
+<link href="bebas-neue.css" rel="stylesheet">
+
 <style>
   body {
     background-color: black;
@@ -24,38 +27,66 @@
     opacity: 1;
   }
 
-  .messageBox {
-    font-family: Helvetica, Arial, sans-serif;
-    font-size: 1.75rem;
-    text-shadow: 0px 0px 5px black;
-    color: white;
-    position: relative;
-    top: -360px;
-    left: 5px;
-    text-align: center;
-    text-shadow: 0px 0px 20px black;
-    height: 360px;
+  #background {
   }
+
+  .messageBox {
+    font-family: "Bebas Neue", sans-serif;
+    font-size: 1.75rem;
+    color: #fcfc34;
+    position: relative;
+    text-align: center;
+  }
+
+  .messageFlex {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background-color: rgba(0, 0, 0 ,.7);
+  }
+
 
 </style>
 <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
 <script src="../tracker.js"></script>
+
+<script>
+const alerts = [
+  {
+    "image": "Boost Alert.webm",
+    "height": "360px",
+    "width": "640px",
+    "offset": { "top": "-226px", "left": "175px", "width": "300px", "height": "104px" },
+  },
+  {
+    "image": "Maple.webm",
+    "width": "360px",
+    "height": "640px",
+    "offset": { "top": "-290px", "width": "220px", "height": "140px", "left": "71px" },
+  },
+  {
+    "image": "Tarot.webm",
+    "width": "360px",
+    "height": "640px",
+    "offset": { "top": "-135px", "width": "295px", "height": "70px", "left": "32px" },
+  }
+];
+</script>
+
 </head>
 
 <body>
 
 <div id="box">
   <div id="alert">
-    <!-- <img src="donation.gif" width="640" height="360"> -->
-
-    <video id="background" muted playsinline width="640" height="360">
+    <video id="background" muted playsinline>
       <source src="Boost Alert.webm" type="video/webm">
     </video>
 
     <div class="messageBox">
-      <div style="display: flex; align-items: center; justify-content: center; margin-top: 131px; height: 110px;">
-        <div style="max-width: 300px;">
-          <div id="message"></div>
+      <div class="messageFlex">
+        <div id="message">
         </div>
       </div>
     </div>
@@ -78,6 +109,8 @@
   const box = document.getElementById("box")
   const alert = document.getElementById("alert")
   const background = document.getElementById("background")
+  const image = background.querySelector("source")
+  const messageBox = document.querySelector(".messageBox")
 
   let playing = false
 
@@ -102,9 +135,39 @@
       break
   }
 
-  const showMessage = (message) => {
-    alert.classList.add("show")
+  const loadRandomAlert = () => {
+    const def = alerts[Math.floor(Math.random() * alerts.length)]
+
+    image.src = def.image
+
+    background.style.width = def.width
+    background.style.height = def.height
+
+    messageBox.style.top = def.offset.top
+    messageBox.style.left = def.offset.left
+    messageBox.style.width = def.offset.width
+    messageBox.style.height = def.offset.height
+
+    background.load()
+
+    return new Promise((resolve, reject) => {
+      background.addEventListener("loadeddata", () => {
+        if (background.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          resolve()
+        }
+      })
+
+      background.addEventListener("error", () => {
+        reject()
+      })
+    })
+  }
+
+  const showMessage = async (message) => {
+    await loadRandomAlert()
+
     background.play()
+    alert.classList.add("show")
 
     alert.querySelector("#message").textContent = message
 
