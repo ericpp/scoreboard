@@ -67,6 +67,10 @@ function PaymentTracker() {
     }
 
     this.add = (payment, old) => {
+        if (old && !this.loadBoosts) {
+            return // skip olds if loadBoosts = false
+        }
+
         if (!payment.sats || isNaN(payment.sats)) {
             return // missing sat amount
         }
