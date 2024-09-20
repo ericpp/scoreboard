@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
     app.setFilter('after', params.get("after") || "2024-06-24 00:00:00 -0500")
     app.setFilter('before', params.get("before"))
 
-    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1"])
+    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
 
     app.setListener((payment, old) => {
         latestBoost.add(payment, old)
