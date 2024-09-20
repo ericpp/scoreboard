@@ -1,0 +1,277 @@
+<html>
+<head>
+<style>
+body {
+  background-color: #000;
+}
+
+:root {
+  --flap-background: #555;
+}
+
+.splitflap {
+  position: relative;
+  min-width: 100px;
+  height: 100px;
+  margin: 10px;
+  line-height: 100px;
+  font-size: 100px;
+  font-family: Monospace;
+  text-align: center;
+  color: white;
+}
+
+.center {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  margin-top: -50px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.top {
+  position: relative;
+  height: 50%;
+  width: 100%;
+  background-color: var(--flap-background);
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+div {
+  perspective: 500px;
+}
+
+.bottom {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  margin-top: -50%;
+  border-radius: 10px 10px 10px 10px;
+  z-index: -1;
+  background-color: black;
+  background-image: linear-gradient(rgba(59, 182, 235, 0), var(--flap-background));
+  transform-origin: center;
+}
+
+.nextHalf {
+  position: relative;
+  height: 50%;
+  width: 100%;
+  margin-top: -100%;
+  overflow: hidden;
+  border-radius: 10px 10px 0 0;
+  z-index: 2;
+  background-color: black;
+  background-image: linear-gradient(var(--flap-background), rgba(59, 182, 235, 0));
+  transform-origin: bottom;
+}
+
+.nextFull {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background-color: var(--flap-background);
+  margin-top: -50%;
+  border-radius: 10px 10px 10px 10px;
+  z-index: -3;
+}
+
+/* bottom flap */
+.flip1 {
+  animation: flip1 ease-in 1;
+  animation-duration: 1s;
+}
+
+/* top flap */
+.flip2 {
+  animation: flip2 ease-out 1;
+  animation-duration: 1s;
+}
+
+.noFlap {
+  background-color: var(--flap-background);
+}
+
+@keyframes flip1 {
+  0% {
+    transform: rotateX(0deg);
+    background-color: var(--flap-background);
+  }
+  50% {
+    transform: rotateX(90deg);
+    background-color: black;
+  }
+  100% {
+    transform: rotateX(90deg);
+  }
+}
+
+@keyframes flip2 {
+  0% {
+    transform: rotateX(-90deg);
+  }
+  50% {
+    transform: rotateX(-90deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+    background-color: var(--flap-background);
+  }
+}
+</style>
+
+</head>
+<body>
+
+<div class="center">
+</div>
+
+
+<script>
+// Set up flaps ////////////////////////////////////////////
+speed = .1; // seconds
+beginStr = "BALTIMORE".toUpperCase().split("");
+endStr = "VANCOUVE".toUpperCase().split("");
+
+div = document.querySelector(".center");
+
+let line = new Line(div, beginStr.length)
+line.addLine(beginStr)
+line.addLine(endStr)
+
+function Line(root, numFlaps) {
+  this.numFlaps = numFlaps
+  this.flaps = []
+  this.queue = []
+
+  this.init = () => {
+    for (var x = 0; x < this.numFlaps; x++) {
+      this.flaps[x] = new Flap(root)
+    }
+
+    setInterval(() => {
+      this.flip()
+    }, speed * 1000)
+
+    setInterval(() => {
+      if(this.isDone() && this.queue.length > 0) {
+        const line = this.queue.shift()
+        this.setLine(line)
+      }
+    }, 3000)
+  }
+
+  this.addLine = (str) => {
+    if (!this.isDone() || this.queue.length > 0) {
+      return this.queue.push(str)
+    }
+
+    this.setLine(str)
+  }
+
+  this.setLine = (str) => {
+    for (var x = 0; x < this.numFlaps; x++) {
+      this.flaps[x].setChar(str[x] || " ")
+    }
+  }
+
+  this.flip = () => {
+    this.flaps.map(flap => flap.flip())
+  }
+
+  this.isDone = () => {
+    return this.flaps.map(flap => flap.isDone()).every(x => x)
+  }
+
+  this.init()
+}
+
+function Flap(root) {
+  this.top = null
+  this.bottom = null
+  this.nextHalf = null
+  this.nextFull = null
+  this.charIndex = 0
+  this.char = " "
+
+  this.letters = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+    ' '
+  ]
+
+  this.init = () => {
+    let el = document.createElement("div")
+    el.classList.add("splitflap")
+    el.innerHTML = '<div class="top"></div><div class="bottom"></div><div class="nextHalf"></div><div class="nextFull"></div>';
+    el = root.appendChild(el)
+
+    this.top = el.querySelector(".top")
+    this.bottom = el.querySelector(".bottom")
+    this.nextHalf = el.querySelector(".nextHalf")
+    this.nextFull = el.querySelector(".nextFull")
+
+    this.bottom.style.animationDuration = speed + "s"
+    this.nextHalf.style.animationDuration = speed + "s"
+  }
+
+  this.flipIt = () => {
+    this.top.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
+    this.bottom.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
+    this.nextFull.innerHTML = this.letters[this.charIndex]
+    this.nextHalf.innerHTML = this.letters[this.charIndex]
+
+    // this.bottom.classList.remove("noFlap")
+    this.bottom.classList.remove("flip1")
+    this.bottom.offsetWidth = this.bottom.offsetWidth
+    this.bottom.classList.add("flip1")
+
+    // this.nextHalf.classList.remove("noFlap")
+    this.nextHalf.classList.remove("flip2")
+    this.nextHalf.offsetWidth = this.nextHalf.offsetWidth
+    this.nextHalf.classList.add("flip2")
+
+    if (this.charIndex > this.letters.length - 2) this.charIndex = 0
+    else this.charIndex++
+  }
+
+  this.dontFlipIt = () => {
+    this.flag = true
+    this.bottom.classList.remove("flip2")
+    this.bottom.classList.add("noFlap")
+    this.nextHalf.classList.add("noFlap")
+    this.top.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
+    this.bottom.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
+  }
+
+  this.flip = () => {
+    if (this.isDone()) {
+      return this.dontFlipIt()
+    }
+
+    this.flipIt()
+  }
+
+  this.setChar = (char) => {
+    if (this.letters.indexOf(char) === -1) {
+      this.letters.push(char)
+    }
+    this.char = char
+  }
+
+  this.isDone = () => {
+    return this.nextFull.innerHTML == this.char
+  }
+
+  this.init()
+}
+
+</script>
+
+</body>
+</html>

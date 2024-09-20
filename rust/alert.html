@@ -3,78 +3,14 @@
 <title>BOOST ALERT</title>
 
 <link href="bebas-neue.css" rel="stylesheet">
+<link href="alert.css" rel="stylesheet">
 
-<style>
-  body {
-    background-color: black;
-  }
-
-  #box {
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #alert {
-    opacity: 0;
-    transition: opacity 0.7s linear;
-  }
-
-  #alert.show {
-    opacity: 1;
-  }
-
-  .messageBox {
-    font-family: "Bebas Neue", sans-serif;
-    font-size: 1.75rem;
-    color: #fcfc34;
-    position: relative;
-    text-align: center;
-  }
-
-  .messageFlex {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    background-color: rgba(0, 0, 0 ,.7);
-  }
-
-
-</style>
 <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
 <script src="../tracker.js"></script>
-
-<script>
-const alerts = [
-  {
-    "image": "Boost Alert.webm",
-    "height": "360px",
-    "width": "640px",
-    "offset": { "top": "-226px", "left": "175px", "width": "300px", "height": "104px" },
-  },
-  {
-    "image": "Maple.webm",
-    "width": "360px",
-    "height": "640px",
-    "offset": { "top": "-290px", "width": "220px", "height": "140px", "left": "71px" },
-  },
-  {
-    "image": "Tarot.webm",
-    "width": "360px",
-    "height": "640px",
-    "offset": { "top": "-135px", "width": "295px", "height": "70px", "left": "32px" },
-  }
-];
-</script>
-
+<script src="alert.js"></script>
 </head>
 
 <body>
-
 <div id="box">
   <div id="alert">
     <video id="background" muted playsinline style="height: 360px; width: 640px;">
@@ -90,135 +26,11 @@ const alerts = [
   </div>
 </div>
 
-
 <script>
-(() => {
-  const app = new PaymentTracker()
-
-  app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
-  app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
-  app.loadBoosts = false
-
-  const boostQueue = []
-
-  const params = (new URL(document.location)).searchParams
-  const pos = params.get("pos") || "tm"
-  const test = params.get("test") || ""
-
-  const box = document.getElementById("box")
-  const alert = document.getElementById("alert")
-  const background = document.getElementById("background")
-  const image = background.querySelector("source")
-  const messageBox = document.querySelector(".messageBox")
-
-  let playing = false
-
-  background.addEventListener("play", () => playing = true)
-  background.addEventListener("ended", () => playing = false)
-
-  switch (pos.substr(0, 1)) {
-    case "t": box.style.alignItems = "flex-start"
-      break
-    case "m": box.style.alignItems = "center"
-      break
-    case "b": box.style.alignItems = "flex-end"
-      break
-  }
-
-  switch (pos.substr(1, 1)) {
-    case "l": box.style.justifyContent = "flex-start"
-      break
-    case "m": box.style.justifyContent = "center"
-      break
-    case "r": box.style.justifyContent = "flex-end"
-      break
-  }
-
-  const loadRandomAlert = () => {
-    const def = alerts[Math.floor(Math.random() * alerts.length)]
-
-    image.src = def.image
-
-    background.style.width = def.width
-    background.style.height = def.height
-
-    messageBox.style.top = def.offset.top
-    messageBox.style.left = def.offset.left
-    messageBox.style.width = def.offset.width
-    messageBox.style.height = def.offset.height
-
-    background.load()
-
-    return new Promise((resolve, reject) => {
-      background.addEventListener("loadeddata", () => {
-        if (background.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-          resolve()
-        }
-      })
-
-      background.addEventListener("error", () => {
-        reject()
-      })
-    })
-  }
-
-  const showMessage = async (message) => {
-    await loadRandomAlert()
-
-    background.play()
-    alert.classList.add("show")
-
-    alert.querySelector("#message").textContent = message
-
-    // background.addEventListener("ended", () => {
-    //   alert.classList.remove("show")
-    // })
-
-    setTimeout(() => {
-      alert.classList.remove("show")
-    }, (background.duration - 2) * 1000)
-  }
-
-  const initBoostQueue = () => {
-    setInterval(() => {
-      if (boostQueue.length === 0 || playing) {
-        return
-      }
-
-      const boost = boostQueue.shift()
-      const sats = boost.sats.toLocaleString()
-
-      showMessage(`${sats} from ${boost.sender_name}`)
-    }, 1000)
-  }
-
-  app.setListener((boost, old) => {
-    if (boost.action != "boost") {
-      return
-    }
-
-    boostQueue.push(boost);
-  });
-
-  if (test != "") {
-    boostQueue.push({
-      sender_name: "Anonymous PodcastGuru User",
-      sats: 3333,
-      app_name: "Test App",
-    })
-
-    app.loadBoosts = true
-  }
-
-  initBoostQueue()
-  app.start()
-
-window.showMessage = showMessage
-window.boostQueue = boostQueue
-
-
-})()
-
+startAlerts({
+  "priority": 0,
+  "numalerts": 3,
+})
 </script>
 </body>
 </html>
