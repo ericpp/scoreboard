@@ -4,6 +4,7 @@ async function startAlerts(config) {
 
   app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
   app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
+
   app.loadBoosts = false
 
   const boostQueue = []
@@ -45,7 +46,7 @@ async function startAlerts(config) {
   }
 
   app.setListener((boost, old) => {
-    if (config.priority && config.priority !== (boost.creation_date % config.numalerts)) {
+    if (config.priority !== undefined && config.priority !== (boost.creation_date % config.numalerts)) {
       return; // show a porition of the boosts based on priority and numalerts
     }
 
