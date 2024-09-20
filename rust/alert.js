@@ -46,6 +46,10 @@ async function startAlerts(config) {
   }
 
   app.setListener((boost, old) => {
+    if (boost.action !== 'boost') {
+      return;
+    }
+
     if (config.priority !== undefined && config.priority !== (boost.creation_date % config.numalerts)) {
       return; // show a porition of the boosts based on priority and numalerts
     }
