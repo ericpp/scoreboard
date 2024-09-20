@@ -1,31 +1,51 @@
 <html>
 <head>
+<title>Rusty board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+
 <style>
-body {
-  background-color: #000;
-}
 
 :root {
-  --flap-background: #555;
+  --flap-background: #000;
+  --flap-font-size: 2rem;
+  --flap-margin: .2rem;
 }
 
+html {
+/*  font-size: 10px;*/
+}
+
+body {
+  background-color: #222;
+  color: #FFF;
+}
+/*ANONYMOUS PODCAST GURU USER*/
 .splitflap {
   position: relative;
-  min-width: 100px;
-  height: 100px;
-  margin: 10px;
-  line-height: 100px;
-  font-size: 100px;
+  min-width: var(--flap-font-size);
+  height: var(--flap-font-size);
+  margin: var(--flap-margin);
+  line-height: var(--flap-font-size);
+  font-size: var(--flap-font-size);
   font-family: Monospace;
   text-align: center;
   color: white;
 }
 
 .center {
-  position: absolute;
+/*  position: absolute;
   left: 0;
   top: 50%;
-  margin-top: -50px;
+  margin-top: var(--flap-top);
+  width: 100%;
+  display: flex;
+  justify-content: center;*/
+}
+
+.line {
   width: 100%;
   display: flex;
   justify-content: center;
@@ -36,21 +56,21 @@ body {
   height: 50%;
   width: 100%;
   background-color: var(--flap-background);
-  border-radius: 10px 10px 0 0;
+  border-radius: var(--flap-margin) var(--flap-margin) 0 0;
   overflow: hidden;
   z-index: 0;
 }
 
-div {
+/*div {
   perspective: 500px;
 }
-
+*/
 .bottom {
   position: relative;
   height: 100%;
   width: 100%;
   margin-top: -50%;
-  border-radius: 10px 10px 10px 10px;
+  border-radius: var(--flap-margin) var(--flap-margin) var(--flap-margin) var(--flap-margin);
   z-index: -1;
   background-color: black;
   background-image: linear-gradient(rgba(59, 182, 235, 0), var(--flap-background));
@@ -63,7 +83,7 @@ div {
   width: 100%;
   margin-top: -100%;
   overflow: hidden;
-  border-radius: 10px 10px 0 0;
+  border-radius: var(--flap-margin) var(--flap-margin) 0 0;
   z-index: 2;
   background-color: black;
   background-image: linear-gradient(var(--flap-background), rgba(59, 182, 235, 0));
@@ -76,7 +96,7 @@ div {
   width: 100%;
   background-color: var(--flap-background);
   margin-top: -50%;
-  border-radius: 10px 10px 10px 10px;
+  border-radius: var(--flap-margin) var(--flap-margin) var(--flap-margin) var(--flap-margin);
   z-index: -3;
 }
 
@@ -127,56 +147,105 @@ div {
 </head>
 <body>
 
-<div class="center">
+<div class="topBoosts">
+  <h1>Top Boosts</h1>
+</div>
+
+<div class="topApps">
+  <h1>Top Apps</h1>
 </div>
 
 
 <script>
 // Set up flaps ////////////////////////////////////////////
 speed = .1; // seconds
-beginStr = "BALTIMORE".toUpperCase().split("");
-endStr = "VANCOUVE".toUpperCase().split("");
 
-div = document.querySelector(".center");
+function ColumnLine(root, columnSizes, columnLetters) {
+  this.columns = []
+  this.columnSizes = columnSizes
+  this.columnLetters = columnLetters
 
-let line = new Line(div, beginStr.length)
-line.addLine(beginStr)
-line.addLine(endStr)
+  this.init = () => {
+    let el = document.createElement("div")
+    el.classList.add("line")
+    el = root.appendChild(el)
+
+    this.columnSizes.forEach((size, x) => {
+      this.columns[x] = new Flaps(el, size + 1, this.columnLetters[x])
+    })
+
+    setInterval(() => {
+      this.columns.forEach(flap => flap.flip())
+    }, speed * 1000)
+  }
+
+  this.setValues = (values) => {
+    values.forEach((value, x) => {
+      const alignRight = (x == values.length - 1)
+      this.columns[x].setString(value, alignRight)
+    })
+  }
+
+  this.init()
+}
+
 
 function Line(root, numFlaps) {
-  this.numFlaps = numFlaps
-  this.flaps = []
+  this.flaps = null
   this.queue = []
 
   this.init = () => {
-    for (var x = 0; x < this.numFlaps; x++) {
-      this.flaps[x] = new Flap(root)
-    }
+    let el = document.createElement("div")
+    el.classList.add("line")
+    el = root.appendChild(el)
+
+    this.flaps = new Flaps(el, numFlaps)
 
     setInterval(() => {
-      this.flip()
+      this.flaps.flip()
     }, speed * 1000)
 
     setInterval(() => {
-      if(this.isDone() && this.queue.length > 0) {
-        const line = this.queue.shift()
-        this.setLine(line)
+      if(this.flaps.isDone() && this.queue.length > 0) {
+        const line = this.queue.pop()
+        this.flaps.setString(line)
+        this.queue = []
       }
     }, 3000)
   }
 
   this.addLine = (str) => {
-    if (!this.isDone() || this.queue.length > 0) {
+    if (!this.flaps.isDone() || this.queue.length > 0) {
       return this.queue.push(str)
     }
 
-    this.setLine(str)
+    this.flaps.setString(str)
   }
 
-  this.setLine = (str) => {
+  this.init()
+}
+
+function Flaps(root, numFlaps, letters) {
+  this.numFlaps = numFlaps
+  this.flaps = []
+
+  this.init = () => {
     for (var x = 0; x < this.numFlaps; x++) {
-      this.flaps[x].setChar(str[x] || " ")
+      this.flaps[x] = new Flap(root, letters)
     }
+  }
+
+  this.setString = (str, alignRight) => {
+    str = (str || "").toUpperCase()
+
+    if (!alignRight) {
+      str = str.padEnd(numFlaps, " ")
+    }
+    else {
+      str = str.padStart(numFlaps, " ")
+    }
+
+    this.flaps.map((flap, x) => this.flaps[x].setChar(str[x] || " "))
   }
 
   this.flip = () => {
@@ -190,19 +259,19 @@ function Line(root, numFlaps) {
   this.init()
 }
 
-function Flap(root) {
+function Flap(root, letters) {
   this.top = null
   this.bottom = null
   this.nextHalf = null
   this.nextFull = null
   this.charIndex = 0
-  this.char = " "
+  this.targetChar = " "
 
-  this.letters = [
+  this.letters = letters || [
+    ' ',
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
     'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
     'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-    ' '
   ]
 
   this.init = () => {
@@ -220,33 +289,53 @@ function Flap(root) {
     this.nextHalf.style.animationDuration = speed + "s"
   }
 
+  this.getChar = () => {
+    return this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
+  }
+
   this.flipIt = () => {
-    this.top.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
-    this.bottom.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
-    this.nextFull.innerHTML = this.letters[this.charIndex]
-    this.nextHalf.innerHTML = this.letters[this.charIndex]
+    const char = this.getChar()
+    const nextChar = this.letters[this.charIndex]
 
-    // this.bottom.classList.remove("noFlap")
+    if (this.top.innerHTML !== char)
+      this.top.innerHTML = char
+
+    if (this.bottom.innerHTML !== char)
+      this.bottom.innerHTML = char
+
+    if (this.nextFull.innerHTML !== nextChar)
+      this.nextFull.innerHTML = nextChar
+
+    if (this.nextHalf.innerHTML !== nextChar)
+      this.nextHalf.innerHTML = nextChar
+
     this.bottom.classList.remove("flip1")
-    this.bottom.offsetWidth = this.bottom.offsetWidth
-    this.bottom.classList.add("flip1")
-
-    // this.nextHalf.classList.remove("noFlap")
     this.nextHalf.classList.remove("flip2")
+
+    this.bottom.offsetWidth = this.bottom.offsetWidth
     this.nextHalf.offsetWidth = this.nextHalf.offsetWidth
+
     this.nextHalf.classList.add("flip2")
+    this.bottom.classList.add("flip1")
 
     if (this.charIndex > this.letters.length - 2) this.charIndex = 0
     else this.charIndex++
   }
 
   this.dontFlipIt = () => {
-    this.flag = true
+    const char = this.getChar()
+
+    if (char == this.top.innerHTML && char == this.bottom.innerHTML) {
+      return
+    }
+
     this.bottom.classList.remove("flip2")
+
     this.bottom.classList.add("noFlap")
     this.nextHalf.classList.add("noFlap")
-    this.top.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
-    this.bottom.innerHTML = this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
+
+    this.top.innerHTML = char
+    this.bottom.innerHTML = char
   }
 
   this.flip = () => {
@@ -259,17 +348,159 @@ function Flap(root) {
 
   this.setChar = (char) => {
     if (this.letters.indexOf(char) === -1) {
-      this.letters.push(char)
+      this.letters = [...this.letters, char]
     }
-    this.char = char
+
+    this.targetChar = char
   }
 
   this.isDone = () => {
-    return this.nextFull.innerHTML == this.char
+    return this.nextFull.innerHTML == this.targetChar
   }
 
   this.init()
 }
+
+
+function TopScore(position, name, sats) {
+    this.position = position
+    this.name = name
+    this.sats = sats
+    this.updated = 0
+
+    this.update = (name, sats) => {
+        if (name != this.name || sats != this.sats) {
+            this.updated = 90
+        }
+
+        this.name = name
+        this.sats = sats
+    }
+
+    this.isUpdated = () => {
+        return this.updated > 0 && this.updated--
+    }
+}
+
+function Scores(el, metric, num) {
+    this.scores = {}
+    this.topScores = []
+    this.el = el
+    this.metric = metric
+    this.renderer = null
+
+    for (let idx = 0; idx < num; idx++) {
+        this.topScores[idx] = new TopScore(idx + 1, null, null)
+    }
+
+    this.add = (payment, old) => {
+        name = payment[metric].toUpperCase()
+
+        if (!this.scores[name]) {
+            this.scores[name] = {'name': name, 'sats': 0}
+        }
+
+        this.scores[name].sats += payment.sats
+        this.updateTopScores()
+        this.render()
+    }
+
+    this.updateTopScores = () => {
+        const newTopScores = Object.values(this.scores).sort((a, b) => {
+            return b.sats - a.sats
+        }).slice(0, num)
+
+        newTopScores.forEach((score, idx) => {
+            this.topScores[idx].update(score.name, score.sats)
+        })
+    }
+
+    this.getTopScores = () => {
+        return this.topScores.filter(x => x.name)
+    }
+
+    this.escapeHtml = (text) => {
+        const div = document.createElement("div")
+        div.appendChild(document.createTextNode(text))
+        return div.innerHTML
+    }
+
+    this.setRenderer = (renderer) => {
+      this.renderer = renderer
+    }
+
+    this.render = () => {
+      this.topScores.forEach(score => this.renderer(score))
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const scoreSlots = 5
+    const displayTime = 3000
+
+const letters = [
+  ' ',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+  'Y', 'Z',
+]
+
+const numbers = [
+  ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+]
+
+let div1 = document.querySelector(".topBoosts");
+
+let boostLines = [];
+for (let idx = 0; idx < scoreSlots; idx++) {
+  boostLines.push(new ColumnLine(div1, [2, 13, 7], [numbers, letters, numbers]))
+}
+
+let div2 = document.querySelector(".topApps");
+
+let appLines = [];
+for (let idx = 0; idx < scoreSlots; idx++) {
+  appLines.push(new ColumnLine(div2, [2, 13, 7], [numbers, letters, numbers]))
+}
+
+    // let totalSats = new SatCounter('#totalSats')
+    // let latestBoost = new LatestPayment('#latest')
+    let topBoosters = new Scores('#boosters', 'sender_name', scoreSlots)
+    topBoosters.setRenderer(score => {
+      const sats = (score.sats || 0).toLocaleString()
+      boostLines[score.position - 1].setValues([`#${score.position}`, score.name, sats])
+    })
+
+    let topApps = new Scores('#apps', 'app_name', scoreSlots)
+    topApps.setRenderer(score => {
+      const sats = (score.sats || 0).toLocaleString()
+      appLines[score.position - 1].setValues([`#${score.position}`, score.name, sats])
+    })
+
+    // let newPayments = new NewPayments('#newBoost', displayTime)
+
+    let app = new PaymentTracker()
+
+    app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
+
+    let params = (new URL(document.location)).searchParams
+
+    app.setFilter('after', params.get("after") || "2024-06-24 00:00:00 -0500")
+    app.setFilter('before', params.get("before"))
+
+    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
+
+    app.setListener((payment, old) => {
+        // latestBoost.add(payment, old)
+        topBoosters.add(payment, old)
+        topApps.add(payment, old)
+        // totalSats.add(payment, old)
+        // newPayments.add(payment, old)
+    })
+
+    app.start()
+})
+
 
 </script>
 
