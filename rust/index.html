@@ -229,9 +229,11 @@ function Flaps(root, numFlaps, letters) {
     str = (str || "").toUpperCase()
 
     if (!alignRight) {
+      str = str.substring(0, numFlaps - 1)
       str = str.padEnd(numFlaps, " ")
     }
     else {
+      str = str.substring(0, numFlaps)
       str = str.padStart(numFlaps, " ")
     }
 
