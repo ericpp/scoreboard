@@ -38,6 +38,7 @@ h1 {
   min-width: var(--flap-min-width);
   height: var(--flap-font-size);
   margin-right: 1px;
+  margin-bottom: 1px;
   line-height: var(--flap-font-size);
   font-size: var(--flap-font-size);
   font-family: Monospace;
@@ -162,6 +163,10 @@ h1 {
   <h1>TOTAL SATS</h1>
 </div>
 
+<div class="latestBoost">
+  <h1>LATEST BOOST</h1>
+</div>
+
 <div class="topBoosts">
   <h1>TOP BOOSTS</h1>
 </div>
@@ -175,15 +180,70 @@ h1 {
 // Set up flaps ////////////////////////////////////////////
 speed = .1 // seconds
 
-function Board(root) {
+function Board(root, numLines, columnSizes, columnLetters) {
   this.lines = []
 
-  this.addLine = (line) => {
-    this.lines.push(line)
+  for (let idx = 0; idx < numLines; idx++) {
+    this.lines.push(
+      new ColumnLine(root, columnSizes, columnLetters)
+    )
   }
 
   this.getLine = (num) => {
     return this.lines[num]
+  }
+
+  this.fillMessage = (messages) => {
+    const regex = new RegExp(".{1," + columnSizes[0] + "}", "g")
+    const split = []
+
+    let line = 0
+
+    // for each message
+    for (var x = 0; x < messages.length; x++) {
+      let size = columnSizes[0]
+      let words = messages[x].split(/\s/)
+
+      // for each word in the message
+      for (var y = 0; y < words.length; y++) {
+        let wordlen = words[y].length
+        let wrap
+        let z = 0
+
+        // split word by maximum column size
+        while ((wrap = regex.exec(words[y])) !== null) {
+          let len = wrap[0].length
+
+          if (!split[line]) {
+            // new line
+            split[line] = wrap[0]
+          }
+          else if (split[line].length + len > columnSizes[0]) {
+            // chunk would overflow line: add to new line
+            line++
+            split[line] = wrap[0]
+          }
+          else if (wrap[0]) {
+            // add to existing line
+            if (z === 0) {
+              // add space if new word
+              split[line] += " "
+            }
+
+            split[line] += wrap[0]
+          }
+
+          z++
+        }
+      }
+
+      line++
+    }
+
+    for (var idx = 0; idx < this.lines.length; idx++) {
+      const values = [split[idx] || ""]
+      this.lines[idx].setValues(values, false)
+    }
   }
 
   this.start = () => {
@@ -204,7 +264,11 @@ function ColumnLine(root, columnSizes, columnLetters) {
     el = root.appendChild(el)
 
     this.columnSizes.forEach((size, x) => {
-      this.columns[x] = new Flaps(el, size + 1, this.columnLetters[x])
+      if (this.columnSizes.length > 1) {
+        size++ // column separator
+      }
+
+      this.columns[x] = new Flaps(el, size, this.columnLetters[x])
     })
   }
 
@@ -212,9 +276,9 @@ function ColumnLine(root, columnSizes, columnLetters) {
     this.columns.forEach(flap => flap.flip())
   }
 
-  this.setValues = (values) => {
+  this.setValues = (values, lastRight) => {
     values.forEach((value, x) => {
-      const alignRight = (x == values.length - 1)
+      const alignRight = (lastRight && x == values.length - 1)
       this.columns[x].setString(value, alignRight)
     })
   }
@@ -236,11 +300,11 @@ function Flaps(root, numFlaps, letters) {
     str = (str || "").toUpperCase()
 
     if (!alignRight) {
-      str = str.substring(0, numFlaps - 1)
+      // str = str.substring(0, numFlaps)
       str = str.padEnd(numFlaps, " ")
     }
     else {
-      str = str.substring(0, numFlaps)
+      // str = str.substring(0, numFlaps)
       str = str.padStart(numFlaps, " ")
     }
 
@@ -375,45 +439,41 @@ const numbers = [
   ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 ]
 
-
 let totalDiv = document.querySelector(".totalSats");
-let totalBoard = new Board(totalDiv)
-totalBoard.addLine(new ColumnLine(totalDiv, [10], [numbers]))
+let totalBoard = new Board(totalDiv, 1, [10], [numbers])
 
 let totalSats = new SatCounter((total) => {
-  totalBoard.getLine(0).setValues([total])
+  totalBoard.getLine(0).setValues([total], true)
 })
 
-let boostDiv = document.querySelector(".topBoosts");
-let boostBoard = new Board(boostDiv)
+let latestDiv = document.querySelector(".latestBoost");
+let latestBoard = new Board(latestDiv, 5, [24], [letters])
 
-for (let idx = 0; idx < scoreSlots; idx++) {
-  boostBoard.addLine(new ColumnLine(boostDiv, [2, 13, 7], [numbers, letters, numbers]))
-}
+let latestBoost = new LatestPayment((message) => {
+  latestBoard.fillMessage(message)
+})
+
+
+let boostDiv = document.querySelector(".topBoosts");
+let boostBoard = new Board(boostDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
 
 let topBoosters = new Scores('sender_name', scoreSlots, (score) => {
   const sats = (score.sats || 0).toLocaleString()
-  boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
+  boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
 })
 
 let appDiv = document.querySelector(".topApps");
-let appBoard = new Board(appDiv)
-
-for (let idx = 0; idx < scoreSlots; idx++) {
-  appBoard.addLine(new ColumnLine(appDiv, [2, 13, 7], [numbers, letters, numbers]))
-}
+let appBoard = new Board(appDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
 
 let topApps = new Scores('app_name', scoreSlots, (score) => {
   const sats = (score.sats || 0).toLocaleString()
-  appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
+  appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
 })
-
-    // let totalSats = new SatCounter('#totalSats')
-    // let latestBoost = new LatestPayment('#latest')
 
 totalBoard.start()
 boostBoard.start()
 appBoard.start()
+latestBoard.start()
 
     // let newPayments = new NewPayments('#newBoost', displayTime)
 
@@ -429,7 +489,7 @@ appBoard.start()
     app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
 
     app.setListener((payment, old) => {
-        // latestBoost.add(payment, old)
+        latestBoost.add(payment, old)
         topBoosters.add(payment, old)
         topApps.add(payment, old)
         totalSats.add(payment, old)
