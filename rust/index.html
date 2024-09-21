@@ -5,6 +5,7 @@
 
 <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
 <script src="../tracker.js"></script>
+<script src="../board.js"></script>
 
 <style>
 
@@ -156,6 +157,10 @@ h1 {
 
 </head>
 <body>
+
+<div class="totalSats">
+  <h1>TOTAL SATS</h1>
+</div>
 
 <div class="topBoosts">
   <h1>TOP BOOSTS</h1>
@@ -355,79 +360,6 @@ function Flap(root, letters) {
   this.init()
 }
 
-
-function TopScore(position, name, sats) {
-    this.position = position
-    this.name = name
-    this.sats = sats
-    this.updated = 0
-
-    this.update = (name, sats) => {
-        if (name != this.name || sats != this.sats) {
-            this.updated = 90
-        }
-
-        this.name = name
-        this.sats = sats
-    }
-
-    this.isUpdated = () => {
-        return this.updated > 0 && this.updated--
-    }
-}
-
-function Scores(el, metric, num) {
-    this.scores = {}
-    this.topScores = []
-    this.el = el
-    this.metric = metric
-    this.renderer = null
-
-    for (let idx = 0; idx < num; idx++) {
-        this.topScores[idx] = new TopScore(idx + 1, null, null)
-    }
-
-    this.add = (payment, old) => {
-        name = payment[metric].toUpperCase()
-
-        if (!this.scores[name]) {
-            this.scores[name] = {'name': name, 'sats': 0}
-        }
-
-        this.scores[name].sats += payment.sats
-        this.updateTopScores()
-        this.render()
-    }
-
-    this.updateTopScores = () => {
-        const newTopScores = Object.values(this.scores).sort((a, b) => {
-            return b.sats - a.sats
-        }).slice(0, num)
-
-        newTopScores.forEach((score, idx) => {
-            this.topScores[idx].update(score.name, score.sats)
-        })
-    }
-
-    this.getTopScores = () => {
-        return this.topScores.filter(x => x.name)
-    }
-
-    this.escapeHtml = (text) => {
-        const div = document.createElement("div")
-        div.appendChild(document.createTextNode(text))
-        return div.innerHTML
-    }
-
-    this.setRenderer = (renderer) => {
-      this.renderer = renderer
-    }
-
-    this.render = () => {
-      this.topScores.forEach(score => this.renderer(score))
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const scoreSlots = 5
     const displayTime = 3000
@@ -443,36 +375,43 @@ const numbers = [
   ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 ]
 
-let div1 = document.querySelector(".topBoosts");
 
-let boostBoard = new Board(div1)
+let totalDiv = document.querySelector(".totalSats");
+let totalBoard = new Board(totalDiv)
+totalBoard.addLine(new ColumnLine(totalDiv, [10], [numbers]))
+
+let totalSats = new SatCounter((total) => {
+  totalBoard.getLine(0).setValues([total])
+})
+
+let boostDiv = document.querySelector(".topBoosts");
+let boostBoard = new Board(boostDiv)
 
 for (let idx = 0; idx < scoreSlots; idx++) {
-  boostBoard.addLine(new ColumnLine(div1, [2, 13, 7], [numbers, letters, numbers]))
+  boostBoard.addLine(new ColumnLine(boostDiv, [2, 13, 7], [numbers, letters, numbers]))
 }
 
-let div2 = document.querySelector(".topApps");
+let topBoosters = new Scores('sender_name', scoreSlots, (score) => {
+  const sats = (score.sats || 0).toLocaleString()
+  boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
+})
 
-let appBoard = new Board(div2)
+let appDiv = document.querySelector(".topApps");
+let appBoard = new Board(appDiv)
 
 for (let idx = 0; idx < scoreSlots; idx++) {
-  appBoard.addLine(new ColumnLine(div2, [2, 13, 7], [numbers, letters, numbers]))
+  appBoard.addLine(new ColumnLine(appDiv, [2, 13, 7], [numbers, letters, numbers]))
 }
+
+let topApps = new Scores('app_name', scoreSlots, (score) => {
+  const sats = (score.sats || 0).toLocaleString()
+  appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
+})
 
     // let totalSats = new SatCounter('#totalSats')
     // let latestBoost = new LatestPayment('#latest')
-    let topBoosters = new Scores('#boosters', 'sender_name', scoreSlots)
-    topBoosters.setRenderer(score => {
-      const sats = (score.sats || 0).toLocaleString()
-      boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
-    })
 
-    let topApps = new Scores('#apps', 'app_name', scoreSlots)
-    topApps.setRenderer(score => {
-      const sats = (score.sats || 0).toLocaleString()
-      appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
-    })
-
+totalBoard.start()
 boostBoard.start()
 appBoard.start()
 
@@ -493,7 +432,7 @@ appBoard.start()
         // latestBoost.add(payment, old)
         topBoosters.add(payment, old)
         topApps.add(payment, old)
-        // totalSats.add(payment, old)
+        totalSats.add(payment, old)
         // newPayments.add(payment, old)
     })
 
