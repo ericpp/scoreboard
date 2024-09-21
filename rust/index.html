@@ -27,7 +27,8 @@ body {
   position: relative;
   min-width: var(--flap-font-size);
   height: var(--flap-font-size);
-  margin: var(--flap-margin);
+/*  margin: var(--flap-margin);*/
+  margin: 1px;
   line-height: var(--flap-font-size);
   font-size: var(--flap-font-size);
   font-family: Monospace;
@@ -158,7 +159,25 @@ body {
 
 <script>
 // Set up flaps ////////////////////////////////////////////
-speed = .1; // seconds
+speed = .1 // seconds
+
+function Board(root) {
+  this.lines = []
+
+  this.addLine = (line) => {
+    this.lines.push(line)
+  }
+
+  this.getLine = (num) => {
+    return this.lines[num]
+  }
+
+  this.start = () => {
+    setInterval(() => {
+      this.lines.forEach(line => line.flip())
+    }, speed * 1000)
+  }
+}
 
 function ColumnLine(root, columnSizes, columnLetters) {
   this.columns = []
@@ -173,10 +192,10 @@ function ColumnLine(root, columnSizes, columnLetters) {
     this.columnSizes.forEach((size, x) => {
       this.columns[x] = new Flaps(el, size + 1, this.columnLetters[x])
     })
+  }
 
-    setInterval(() => {
-      this.columns.forEach(flap => flap.flip())
-    }, speed * 1000)
+  this.flip = () => {
+    this.columns.forEach(flap => flap.flip())
   }
 
   this.setValues = (values) => {
@@ -202,16 +221,16 @@ function Line(root, numFlaps) {
     this.flaps = new Flaps(el, numFlaps)
 
     setInterval(() => {
-      this.flaps.flip()
-    }, speed * 1000)
-
-    setInterval(() => {
       if(this.flaps.isDone() && this.queue.length > 0) {
         const line = this.queue.pop()
         this.flaps.setString(line)
         this.queue = []
       }
     }, 3000)
+  }
+
+  this.flip = () => {
+    this.columns.forEach(flap => flap.flip())
   }
 
   this.addLine = (str) => {
@@ -245,11 +264,11 @@ function Flaps(root, numFlaps, letters) {
       str = str.padStart(numFlaps, " ")
     }
 
-    this.flaps.map((flap, x) => this.flaps[x].setChar(str[x] || " "))
+    this.flaps.forEach((flap, x) => this.flaps[x].setChar(str[x] || " "))
   }
 
   this.flip = () => {
-    this.flaps.map(flap => flap.flip())
+    this.flaps.forEach(flap => flap.flip())
   }
 
   this.isDone = () => {
@@ -451,16 +470,18 @@ const numbers = [
 
 let div1 = document.querySelector(".topBoosts");
 
-let boostLines = [];
+let boostBoard = new Board(div1)
+
 for (let idx = 0; idx < scoreSlots; idx++) {
-  boostLines.push(new ColumnLine(div1, [2, 13, 7], [numbers, letters, numbers]))
+  boostBoard.addLine(new ColumnLine(div1, [2, 13, 7], [numbers, letters, numbers]))
 }
 
 let div2 = document.querySelector(".topApps");
 
-let appLines = [];
+let appBoard = new Board(div2)
+
 for (let idx = 0; idx < scoreSlots; idx++) {
-  appLines.push(new ColumnLine(div2, [2, 13, 7], [numbers, letters, numbers]))
+  appBoard.addLine(new ColumnLine(div2, [2, 13, 7], [numbers, letters, numbers]))
 }
 
     // let totalSats = new SatCounter('#totalSats')
@@ -468,14 +489,17 @@ for (let idx = 0; idx < scoreSlots; idx++) {
     let topBoosters = new Scores('#boosters', 'sender_name', scoreSlots)
     topBoosters.setRenderer(score => {
       const sats = (score.sats || 0).toLocaleString()
-      boostLines[score.position - 1].setValues([`#${score.position}`, score.name, sats])
+      boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
     })
 
     let topApps = new Scores('#apps', 'app_name', scoreSlots)
     topApps.setRenderer(score => {
       const sats = (score.sats || 0).toLocaleString()
-      appLines[score.position - 1].setValues([`#${score.position}`, score.name, sats])
+      appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats])
     })
+
+boostBoard.start()
+appBoard.start()
 
     // let newPayments = new NewPayments('#newBoost', displayTime)
 
