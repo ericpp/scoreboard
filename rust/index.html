@@ -10,8 +10,9 @@
 
 :root {
   --flap-background: #000;
-  --flap-font-size: 2rem;
-  --flap-margin: .2rem;
+  --flap-font-size: 1rem;
+  --flap-margin: .1rem;
+  --flap-min-width: 0.6rem;
 }
 
 html {
@@ -22,28 +23,22 @@ body {
   background-color: #222;
   color: #FFF;
 }
+
+h1 {
+  font-size: 1rem;
+}
+
 /*ANONYMOUS PODCAST GURU USER*/
 .splitflap {
   position: relative;
-  min-width: var(--flap-font-size);
+  min-width: var(--flap-min-width);
   height: var(--flap-font-size);
-/*  margin: var(--flap-margin);*/
   margin: 1px;
   line-height: var(--flap-font-size);
   font-size: var(--flap-font-size);
   font-family: Monospace;
   text-align: center;
   color: white;
-}
-
-.center {
-/*  position: absolute;
-  left: 0;
-  top: 50%;
-  margin-top: var(--flap-top);
-  width: 100%;
-  display: flex;
-  justify-content: center;*/
 }
 
 .line {
@@ -62,15 +57,11 @@ body {
   z-index: 0;
 }
 
-/*div {
-  perspective: 500px;
-}
-*/
 .bottom {
   position: relative;
   height: 100%;
   width: 100%;
-  margin-top: -50%;
+  margin-top: -85%;
   border-radius: var(--flap-margin) var(--flap-margin) var(--flap-margin) var(--flap-margin);
   z-index: -1;
   background-color: black;
@@ -82,7 +73,7 @@ body {
   position: relative;
   height: 50%;
   width: 100%;
-  margin-top: -100%;
+  margin-top: -165%;
   overflow: hidden;
   border-radius: var(--flap-margin) var(--flap-margin) 0 0;
   z-index: 2;
@@ -96,7 +87,7 @@ body {
   height: 100%;
   width: 100%;
   background-color: var(--flap-background);
-  margin-top: -50%;
+  margin-top: -85%;
   border-radius: var(--flap-margin) var(--flap-margin) var(--flap-margin) var(--flap-margin);
   z-index: -3;
 }
@@ -143,6 +134,21 @@ body {
     background-color: var(--flap-background);
   }
 }
+
+/* md */
+@media (min-width: 768px) {
+  html {
+    font-size: 32px;
+  }
+}
+
+/* lg */
+@media (min-width: 1024px) {
+  html {
+    font-size: 48px;
+  }
+}
+
 </style>
 
 </head>
@@ -203,42 +209,6 @@ function ColumnLine(root, columnSizes, columnLetters) {
       const alignRight = (x == values.length - 1)
       this.columns[x].setString(value, alignRight)
     })
-  }
-
-  this.init()
-}
-
-
-function Line(root, numFlaps) {
-  this.flaps = null
-  this.queue = []
-
-  this.init = () => {
-    let el = document.createElement("div")
-    el.classList.add("line")
-    el = root.appendChild(el)
-
-    this.flaps = new Flaps(el, numFlaps)
-
-    setInterval(() => {
-      if(this.flaps.isDone() && this.queue.length > 0) {
-        const line = this.queue.pop()
-        this.flaps.setString(line)
-        this.queue = []
-      }
-    }, 3000)
-  }
-
-  this.flip = () => {
-    this.columns.forEach(flap => flap.flip())
-  }
-
-  this.addLine = (str) => {
-    if (!this.flaps.isDone() || this.queue.length > 0) {
-      return this.queue.push(str)
-    }
-
-    this.flaps.setString(str)
   }
 
   this.init()
