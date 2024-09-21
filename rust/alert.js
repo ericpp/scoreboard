@@ -1,5 +1,7 @@
 
 async function startAlerts(config) {
+  config = config || {}
+
   const app = new PaymentTracker()
 
   app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
