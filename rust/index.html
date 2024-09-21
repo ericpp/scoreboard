@@ -440,14 +440,14 @@ document.addEventListener('DOMContentLoaded', () => {
     ]
 
     let totalDiv = document.querySelector(".totalSats");
-    let totalBoard = new Board(totalDiv, 1, [10], [numbers])
+    let totalBoard = new Board(totalDiv, 1, [12], [numbers])
 
     let totalSats = new SatCounter((total) => {
       totalBoard.getLine(0).setValues([total], true)
     })
 
     let latestDiv = document.querySelector(".latestBoost");
-    let latestBoard = new Board(latestDiv, 8, [25], [letters])
+    let latestBoard = new Board(latestDiv, 8, [26], [letters])
 
     let latestBoost = new LatestPayment((message) => {
       latestBoard.fillMessage(message)
