@@ -177,7 +177,6 @@ h1 {
 
 
 <script>
-// Set up flaps ////////////////////////////////////////////
 speed = .1 // seconds
 
 function Board(root, numLines, columnSizes, columnLetters) {
@@ -428,52 +427,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoreSlots = 5
     const displayTime = 3000
 
-const letters = [
-  ' ',
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-  'Y', 'Z',
-]
+    const letters = [
+      ' ',
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+      'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+      'Y', 'Z',
+    ]
 
-const numbers = [
-  ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-]
+    const numbers = [
+      ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    ]
 
-let totalDiv = document.querySelector(".totalSats");
-let totalBoard = new Board(totalDiv, 1, [10], [numbers])
+    let totalDiv = document.querySelector(".totalSats");
+    let totalBoard = new Board(totalDiv, 1, [10], [numbers])
 
-let totalSats = new SatCounter((total) => {
-  totalBoard.getLine(0).setValues([total], true)
-})
+    let totalSats = new SatCounter((total) => {
+      totalBoard.getLine(0).setValues([total], true)
+    })
 
-let latestDiv = document.querySelector(".latestBoost");
-let latestBoard = new Board(latestDiv, 5, [24], [letters])
+    let latestDiv = document.querySelector(".latestBoost");
+    let latestBoard = new Board(latestDiv, 5, [24], [letters])
 
-let latestBoost = new LatestPayment((message) => {
-  latestBoard.fillMessage(message)
-})
+    let latestBoost = new LatestPayment((message) => {
+      latestBoard.fillMessage(message)
+    })
 
 
-let boostDiv = document.querySelector(".topBoosts");
-let boostBoard = new Board(boostDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
+    let boostDiv = document.querySelector(".topBoosts");
+    let boostBoard = new Board(boostDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
 
-let topBoosters = new Scores('sender_name', scoreSlots, (score) => {
-  const sats = (score.sats || 0).toLocaleString()
-  boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
-})
+    let topBoosters = new Scores('sender_name', scoreSlots, (score) => {
+      const sats = (score.sats || 0).toLocaleString()
+      boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
+    })
 
-let appDiv = document.querySelector(".topApps");
-let appBoard = new Board(appDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
+    let appDiv = document.querySelector(".topApps");
+    let appBoard = new Board(appDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
 
-let topApps = new Scores('app_name', scoreSlots, (score) => {
-  const sats = (score.sats || 0).toLocaleString()
-  appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
-})
-
-totalBoard.start()
-boostBoard.start()
-appBoard.start()
-latestBoard.start()
+    let topApps = new Scores('app_name', scoreSlots, (score) => {
+      const sats = (score.sats || 0).toLocaleString()
+      appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
+    })
 
     // let newPayments = new NewPayments('#newBoost', displayTime)
 
@@ -483,7 +477,7 @@ latestBoard.start()
 
     let params = (new URL(document.location)).searchParams
 
-    app.setFilter('after', params.get("after") || "2024-06-24 00:00:00 -0500")
+    app.setFilter('after', params.get("after") || "2024-09-21 00:00:00 -0500")
     app.setFilter('before', params.get("before"))
 
     app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
@@ -495,6 +489,11 @@ latestBoard.start()
         totalSats.add(payment, old)
         // newPayments.add(payment, old)
     })
+
+    totalBoard.start()
+    boostBoard.start()
+    appBoard.start()
+    latestBoard.start()
 
     app.start()
 })
