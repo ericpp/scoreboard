@@ -237,6 +237,7 @@ function Board(root, numLines, columnSizes, columnLetters) {
       }
 
       line++
+      line++
     }
 
     for (var idx = 0; idx < this.lines.length; idx++) {
@@ -446,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 
     let latestDiv = document.querySelector(".latestBoost");
-    let latestBoard = new Board(latestDiv, 5, [24], [letters])
+    let latestBoard = new Board(latestDiv, 8, [25], [letters])
 
     let latestBoost = new LatestPayment((message) => {
       latestBoard.fillMessage(message)
@@ -454,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     let boostDiv = document.querySelector(".topBoosts");
-    let boostBoard = new Board(boostDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
+    let boostBoard = new Board(boostDiv, scoreSlots, [2, 14, 7], [numbers, letters, numbers])
 
     let topBoosters = new Scores('sender_name', scoreSlots, (score) => {
       const sats = (score.sats || 0).toLocaleString()
@@ -462,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 
     let appDiv = document.querySelector(".topApps");
-    let appBoard = new Board(appDiv, scoreSlots, [2, 13, 7], [numbers, letters, numbers])
+    let appBoard = new Board(appDiv, scoreSlots, [2, 14, 7], [numbers, letters, numbers])
 
     let topApps = new Scores('app_name', scoreSlots, (score) => {
       const sats = (score.sats || 0).toLocaleString()
