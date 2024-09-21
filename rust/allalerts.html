@@ -1,0 +1,33 @@
+<html>
+<head>
+<title>BOOST ALERT</title>
+
+<link href="bebas-neue.css" rel="stylesheet">
+<link href="alert.css" rel="stylesheet">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="alert.js"></script>
+</head>
+
+<body>
+<div id="box">
+  <div id="alert">
+    <video id="background" muted playsinline style="height: 360px; width: 640px;">
+      <source src="Boost Alert.webm" type="video/webm">
+    </video>
+
+    <div class="messageBox" style="top: -226px; left: 175px; width: 300px; height: 104px;">
+      <div class="messageFlex">
+        <div id="message">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+startAlerts()
+</script>
+</body>
+</html>
