@@ -418,7 +418,7 @@ function Flap(root, letters) {
   }
 
   this.isDone = () => {
-    return this.nextFull.innerHTML == this.targetChar
+    return this.nextFull.textContent == this.targetChar
   }
 
   this.init()
