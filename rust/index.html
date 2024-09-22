@@ -217,7 +217,7 @@ function Board(root, numLines, columnSizes, columnLetters) {
             // new line
             split[line] = wrap[0]
           }
-          else if (split[line].length + len > columnSizes[0]) {
+          else if (split[line].length + len + 1 > columnSizes[0]) {
             // chunk would overflow line: add to new line
             line++
             split[line] = wrap[0]
