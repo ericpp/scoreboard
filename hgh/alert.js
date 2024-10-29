@@ -41,7 +41,7 @@ async function startAlerts(config) {
   const app = new PaymentTracker()
 
   app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
-  app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
+  app.setFilter('excludePodcasts', ["Podcasting 2.0"])
 
   app.loadBoosts = false
 
