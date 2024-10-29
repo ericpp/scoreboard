@@ -42,7 +42,7 @@ function RemoteItemInfo() {
         })
     }
 
-    setTimeout(async () => {
+    setInterval(async () => {
         Object.values(this.queue).forEach(async item => {
             const key = item.podcastguid + "|" + item.episodeguid
 
