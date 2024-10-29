@@ -61,22 +61,35 @@ async function startAlerts(config) {
 
   const init = () => {
     setInterval(() => {
-      if (boostQueue.length === 0 || playing) {
+      if (boostQueue.length === 0 || background.playing) {
         return
       }
 
       const boost = boostQueue.shift()
       const sats = boost.sats.toLocaleString()
 
-      showMessage(`${sats} from ${boost.sender_name}`)
+      let remote_info = ""
+
+      if (boost.remote_feed) {
+        remote_info = `${boost.remote_feed} - ${boost.remote_item}`
+      }
+
+      showMessage(`${sats} sats from ${boost.sender_name}`, remote_info)
     }, 1000)
   }
 
-  const showMessage = async (message) => {
+
+  const showMessage = async (message, line2) => {
     background.play()
     alert.classList.add("show")
 
     alert.querySelector("#message").textContent = message
+
+    if (line2) {
+      const span = document.createElement("span")
+      span.textContent = line2
+      alert.querySelector("#message").innerHTML += '<br>' + span.innerHTML
+    }
 
     setTimeout(() => {
       alert.classList.remove("show")

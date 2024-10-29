@@ -1,4 +1,18 @@
 
+async function addRemoteInfo(boost) {
+    if (!boost.remote_feed_guid) {
+        return {}
+    }
+
+    const result = await fetch(`https://api.podcastindex.org/api/1.0/value/byepisodeguid?podcastguid=${boost.remote_feed_guid}&episodeguid=${boost.remote_item_guid}`)
+    const json = await result.json()
+
+    return {
+        "remote_feed": json.value.feedTitle,
+        "remote_item": json.value.title,
+    }
+}
+
 function PaymentTracker() {
     const nostrRelays = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
 
@@ -121,7 +135,7 @@ function NostrWatcher(relays) {
         let self = this
 
         this.nostrPool.subscribeMany(this.nostrRelays, [{authors: [nostrPubkey]}], {
-            onevent(event) {
+            async onevent(event) {
                 invoice = JSON.parse(event.content)
 
                 if (isOldTimeout) {
@@ -151,6 +165,7 @@ function NostrWatcher(relays) {
                     podcast: boost.podcast || 'Unknown',
                     sats: Math.floor(boost.value_msat_total / 1000),
                     message: boost.message,
+                    ...await addRemoteInfo(boost),
                 }, isOld)
             },
             oneose() {
@@ -205,6 +220,7 @@ function NostrWatcher(relays) {
                     podcast: 'Nostr',
                     sats: Math.floor(value_msat_total / 1000),
                     message: event.content,
+                    ...await addRemoteInfo(boost),
                 }, isOld)
             },
             oneose() {
@@ -310,7 +326,7 @@ function StoredBoosts(filters) {
 
             lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
 
-            boosts.forEach(invoice => {
+            boosts.forEach(async invoice => {
                 if (!invoice.boostagram) {
                     return
                 }
@@ -327,6 +343,7 @@ function StoredBoosts(filters) {
                     podcast: boost.podcast || 'Unknown',
                     sats: Math.floor(boost.value_msat_total / 1000),
                     message: boost.message,
+                    ...await addRemoteInfo(boost),
                 }, true)
             })
 
