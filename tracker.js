@@ -14,6 +14,7 @@ async function addRemoteInfo(boost) {
 
 function RemoteItemInfo() {
     this.resolved = {}
+    this.queue = {}
 
     this.fetch = async (podcastguid, episodeguid) => {
         const result = await fetch(`https://api.podcastindex.org/api/1.0/value/byepisodeguid?podcastguid=${podcastguid}&episodeguid=${episodeguid}`)
@@ -25,15 +26,36 @@ function RemoteItemInfo() {
         }
     }
 
-    this.resolve = async (podcastguid, episodeguid) => {
-        const key = podcastguid + "|" + episodeguid
+    this.resolve = (podcastguid, episodeguid) => {
+        return new Promise(resolve => {
+            const key = podcastguid + "|" + episodeguid
 
-        if (!this.resolved[key]) {
-            this.resolved[key] = await this.fetch(podcastguid, episodeguid)
-        }
+            if (!this.queue[key]) {
+                this.queue[key] = {
+                    "podcastguid": podcastguid,
+                    "episodeguid": episodeguid,
+                    "resolvers": [],
+                }
+            }
 
-        return this.resolved[key]
+            this.queue[key].resolvers.push(resolve)
+        })
     }
+
+    setTimeout(async () => {
+        Object.values(this.queue).forEach(async item => {
+            const key = item.podcastguid + "|" + item.episodeguid
+
+            if (!this.resolved[key]) {
+                this.resolved[key] = await this.fetch(item.podcastguid, item.episodeguid)
+            }
+
+            item.resolvers.forEach((resolver, index) => {
+                delete item.resolvers[index]
+                resolver(this.resolved[key])
+            })
+        })
+    }, 100)
 }
 
 function PaymentTracker() {
