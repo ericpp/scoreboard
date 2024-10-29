@@ -1,15 +1,38 @@
+let remoteInfo = null;
 
 async function addRemoteInfo(boost) {
     if (!boost.remote_feed_guid) {
         return {}
     }
 
-    const result = await fetch(`https://api.podcastindex.org/api/1.0/value/byepisodeguid?podcastguid=${boost.remote_feed_guid}&episodeguid=${boost.remote_item_guid}`)
-    const json = await result.json()
+    if (!remoteInfo) {
+        remoteInfo = new RemoteItemInfo()
+    }
 
-    return {
-        "remote_feed": json.value.feedTitle,
-        "remote_item": json.value.title,
+    return await remoteInfo.resolve(boost.remote_feed_guid, boost.remote_item_guid)
+}
+
+function RemoteItemInfo() {
+    this.resolved = {}
+
+    this.fetch = async (podcastguid, episodeguid) => {
+        const result = await fetch(`https://api.podcastindex.org/api/1.0/value/byepisodeguid?podcastguid=${podcastguid}&episodeguid=${episodeguid}`)
+        const json = await result.json()
+
+        return {
+            "remote_feed": json.value.feedTitle,
+            "remote_item": json.value.title,
+        }
+    }
+
+    this.resolve = async (podcastguid, episodeguid) => {
+        const key = podcastguid + "|" + episodeguid
+
+        if (!this.resolved[key]) {
+            this.resolved[key] = await this.fetch(podcastguid, episodeguid)
+        }
+
+        return this.resolved[key]
     }
 }
 
