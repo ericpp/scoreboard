@@ -20,13 +20,8 @@ body {
   opacity: 1;
 }
 
-.messageBox {
-  font-family: "Joystix", sans-serif;
-  font-size: 2rem;
-  color: #fff;
-  position: relative;
-  text-align: center;
-  text-shadow: 1px 1px 20px #000, 0 0 1em #000, 0 0 0.2em #000;
+#message {
+  position: absolute;
 }
 
 .messageFlex {
@@ -34,4 +29,10 @@ body {
   align-items: center;
   justify-content: center;
   height: 100%;
+
+  font-family: "Joystix", sans-serif;
+  font-size: 2rem;
+  color: #fff;
+  text-align: center;
+  text-shadow: 1px 1px 20px #000, 0 0 1em #000, 0 0 0.2em #000;
 }
