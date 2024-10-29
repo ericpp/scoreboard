@@ -1,7 +1,7 @@
 let remoteInfo = null;
 
 async function addRemoteInfo(boost) {
-    if (!boost.remote_feed_guid) {
+    if (!boost.remote_feed_guid || !boost.remote_item_guid) {
         return {}
     }
 
@@ -19,6 +19,10 @@ function RemoteItemInfo() {
     this.fetch = async (podcastguid, episodeguid) => {
         const result = await fetch(`https://api.podcastindex.org/api/1.0/value/byepisodeguid?podcastguid=${podcastguid}&episodeguid=${episodeguid}`)
         const json = await result.json()
+
+        if (json.status == 'false') {
+            return {}
+        }
 
         return {
             "remote_feed": json.value.feedTitle,
@@ -46,7 +50,7 @@ function RemoteItemInfo() {
         Object.values(this.queue).forEach(async item => {
             const key = item.podcastguid + "|" + item.episodeguid
 
-            if (!this.resolved[key]) {
+            if (this.resolved[key] === undefined) {
                 this.resolved[key] = await this.fetch(item.podcastguid, item.episodeguid)
             }
 
