@@ -38,6 +38,9 @@ function getAlert(image) {
 async function startAlerts(config) {
   config = config || {}
 
+  config.loadBoosts = config.loadBoosts || false
+  config.loadZaps = config.loadZaps || false
+
   const app = new PaymentTracker(config)
 
   const alert = document.getElementById("alert")
