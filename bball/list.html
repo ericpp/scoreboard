@@ -1,0 +1,122 @@
+<html>
+  <head>
+  <title>List</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-size: 24px;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    li {
+      margin: 0.5em 0;
+      transition: color 1s 0s;
+      cursor: pointer;
+    }
+
+    li.added {
+      color: #ff0;
+    }
+
+    li.highlight {
+      background-color: #333;
+    }
+
+    li small {
+      color: #999;
+    }
+  </style>
+
+  <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+  <script src="../tracker.js"></script>
+  <script src="config.js"></script>
+
+</head>
+
+<body>
+
+<h3>Donations</h3>
+
+<ul id="list">
+</ul>
+
+<script>
+
+const payments = []
+
+document.addEventListener('DOMContentLoaded', () => {
+  const cfg = loadConfig()
+  const url = getUrlConfig(document.location)
+
+  if (url.before) {
+    cfg.before = url.before
+  }
+
+  if (url.after) {
+    cfg.after = url.after
+  }
+
+  cfg.loadBoosts = true
+  cfg.loadZaps = true
+
+  const app = new PaymentTracker(cfg)
+
+  app.setListener((payment, old) => {
+
+    if (payment.action != "boost" && payment.type != "zap") {
+      return
+    }
+
+    const beforeItem = [...list.children].reduce((result, item) => {
+      if (payment.creation_date > item.getAttribute('data-timestamp')) {
+        result = item
+      }
+      return result
+    }, null)
+
+    const date = new Date(payment.creation_date * 1000)
+    const boostZap = payment.type == 'zap' ? 'zapped' : 'boosted'
+    const appName = payment.type == 'zap' ? '' : `from ${payment.app_name}`
+    const paymentMessage = payment.message ? ` saying "${payment.message}"` : ''
+    const message = `${payment.sender_name} ${boostZap} ${payment.sats} sats ${appName}${paymentMessage}`
+
+    const description = `${date.toLocaleString()} - ${payment.podcast}`
+
+    const li = document.createElement("li")
+    li.classList.add("added")
+    li.setAttribute('data-timestamp', payment.creation_date)
+    li.appendChild(document.createTextNode(message))
+    li.appendChild(document.createElement('br'))
+
+    const small = document.createElement("small")
+    small.appendChild(document.createTextNode(description))
+    li.appendChild(small)
+
+    if (beforeItem) {
+      list.insertBefore(li, beforeItem)
+    }
+    else {
+      list.appendChild(li)
+    }
+
+    li.addEventListener("click", () => {
+      [...list.children].forEach((item) => {
+        item.classList.remove("highlight")
+      })
+
+      li.classList.add("highlight")
+    })
+
+    setTimeout(() => li.classList.remove("added"), 1)
+  })
+
+  app.start()
+})
+
+</script>
+</body>
+</html>
