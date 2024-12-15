@@ -6,8 +6,18 @@ function PaymentTracker(config) {
 
   this.nostrBoostPkey = config.nostrBoostPkey || null
   this.nostrZapEvent = config.nostrZapEvent || null
-  this.loadBoosts = config.loadBoosts || true
-  this.loadZaps = config.loadZaps || true
+
+  this.loadBoosts = true
+
+  if (config.loadBoosts !== undefined) {
+    this.loadBoosts = config.loadBoosts
+  }
+
+  this.loadZaps = true
+
+  if (config.loadZaps) {
+    this.loadZaps = config.loadZaps
+  }
 
   this.filters = {}
   this.identifiers = []
