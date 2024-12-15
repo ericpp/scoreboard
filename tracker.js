@@ -15,7 +15,7 @@ function PaymentTracker(config) {
 
   this.loadZaps = true
 
-  if (config.loadZaps) {
+  if (config.loadZaps !== undefined) {
     this.loadZaps = config.loadZaps
   }
 
