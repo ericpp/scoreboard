@@ -2,7 +2,7 @@
 function PaymentTracker(config) {
   config = config || {}
 
-  this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
+  this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol"]
 
   this.nostrBoostPkey = config.nostrBoostPkey || null
   this.nostrZapEvent = config.nostrZapEvent || null
