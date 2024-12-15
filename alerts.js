@@ -59,6 +59,10 @@ async function startAlerts(config) {
       app.setFilter("after", url.after)
     }
 
+    if (url.naddr) {
+      app.setNostrZapEvent(url.naddr)
+    }
+
     if (url.test) {
       alertQueue.push({
         sender_name: "Anonymous PodcastGuru User",
