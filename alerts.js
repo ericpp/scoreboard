@@ -40,6 +40,7 @@ async function startAlerts(config) {
 
   config.loadBoosts = config.loadBoosts || false
   config.loadZaps = config.loadZaps || false
+  config.showMessages = config.showMessages || false
 
   const app = new PaymentTracker(config)
 
@@ -61,6 +62,10 @@ async function startAlerts(config) {
 
     if (url.naddr) {
       app.setNostrZapEvent(url.naddr)
+    }
+
+    if (typeof url.showMessages !== undefined) {
+      config.showMessages = url.showMessages
     }
 
     if (url.test) {
@@ -94,8 +99,9 @@ async function startAlerts(config) {
 
       const payment = alertQueue.shift()
       const sats = payment.sats.toLocaleString()
+      const message = config.showMessages ? payment.message : getRemoteInfo(payment)
 
-      showMessage(`${sats} sat ${payment.type} from ${payment.sender_name}`, getRemoteInfo(payment), payment.picture)
+      showMessage(`${sats} sat ${payment.type} from ${payment.sender_name}`, message, payment.picture)
     }, 1000)
 
     app.start()
