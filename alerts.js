@@ -64,6 +64,14 @@ async function startAlerts(config) {
       app.setNostrZapEvent(url.naddr)
     }
 
+    if (url.loadBoosts) {
+      app.loadBoosts = true
+    }
+
+    if (url.loadZaps) {
+      app.loadZaps = true
+    }
+
     if (typeof url.showMessages !== undefined) {
       config.showMessages = url.showMessages
     }
