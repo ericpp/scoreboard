@@ -476,9 +476,9 @@ function RemoteItemInfo() {
 
 
 const getUrlConfig = (url) => {
-  const params = (new URL(url)).searchParams
+  const params = (new URL(url)).searchParams.entries()
 
-  return params.entries().reduce((result, [key, val]) => {
+  return [...params].reduce((result, [key, val]) => {
     result[key] = val
     return result
   }, {})
