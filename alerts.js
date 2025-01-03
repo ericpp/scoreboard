@@ -42,6 +42,9 @@ async function startAlerts(config) {
   config.loadZaps = config.loadZaps || false
   config.showMessages = config.showMessages || false
 
+  config.nostrBoostPkey = config.nostrBoostPkey || "npub1sp8w4t66l3nu46d22zn2uq6hrtnf8l9jw775p4jtje439h96yh8qzmpw6q"
+  config.excludePodcasts = config.excludePodcasts || ["Podcasting 2.0"]
+
   const app = new PaymentTracker(config)
 
   const alert = document.getElementById("alert")
