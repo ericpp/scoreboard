@@ -1,0 +1,111 @@
+<html>
+<head>
+<title>Flakes</title>
+
+<link href="../alert.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../alerts.js"></script>
+
+<style>
+@font-face {
+  font-family: 'Bradley Gratis';
+    src: url('Bradley Gratis.ttf'),
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+  font-family: 'Bradley Gratis';
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+</style>
+</head>
+
+<body>
+
+<div style="display: flex; justify-content: center; align-items: center; height: 100%">
+  <div class="box" style="margin: auto; margin-top: auto; border: 1px solid #222; min-width: 1920px; min-height: 1080px; width: 1920px; height: 1080px;">
+    <div id="alert1" class="alert" style="position: absolute;">
+      <div class="messageFlex">
+        <video class="background" muted playsinline style="width: 1920px; height: 1080px;">
+          <source src="" type="video/webm">
+        </video>
+        <div class="message" style="display: flex; align-items: center; width: 350px; height: 320px; margin-left: 80px; bottom: 34px; left: 0px;">
+          <div class="picture"></div>
+          <div class="messageText" style="flex: 1 1"></div>
+        </div>
+      </div>
+    </div>
+    <div id="alert2" class="alert show" style="position: absolute;">
+      <div class="messageFlex">
+        <video class="background" muted playsinline style="width: 1920px; height: 1080px;">
+          <source src="" type="video/webm">
+        </video>
+        <div class="message" style="display: flex; align-items: center; width: 350px; height: 320px; margin-right: 103px; bottom: 33px; right: 0px;">
+          <div class="picture"></div>
+          <div class="messageText" style="flex: 1 1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  const slots = [{
+    id: "#alert1",
+    images: [
+      "SF 1 Left.webm",
+      "SF 2 Left.webm",
+      "SF 3 Left.webm",
+    ],
+    message: {
+      timeShow: 3,
+      timeHide: 6,
+      offsetY: [0, -3, 0]
+    }
+  },
+  {
+    id: "#alert2",
+    images: [
+      "SF 4 Right.webm",
+      "SF 5 Right.webm",
+      "SF 6 Right.webm",
+    ],
+    message: {
+      timeShow: 3,
+      timeHide: 6,
+      offsetY: [-2, 0, 0]
+    }
+  }]
+
+  const SATOSHI = `
+  <svg fill="white" xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; vertical-align: middle;" viewBox="6.5 2.5 11 19">
+    <path d="M7 7.90906H17" stroke="currentColor"/>
+    <path d="M12 5.45454V3" stroke="currentColor"/>
+    <path d="M12 20.9999V18.5454" stroke="currentColor"/>
+    <path d="M7 12H17" stroke="currentColor"/>
+    <path d="M7 16.0909H17" stroke="currentColor"/>
+  </svg>`
+
+  const messageRender = (slot, payment) => {
+    const sats = payment.sats.toLocaleString()
+    const sender_name = payment.sender_name
+
+    slot.showMessage(`${escapeHtml(sats)} ${SATOSHI} ${escapeHtml(payment.sender_name)}`)
+  }
+
+  startAlerts({
+    after: "2024-12-25 00:00:00",
+    slots,
+    messageRender,
+  })
+})()
+</script>
+
+</body>
+</html>
