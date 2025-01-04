@@ -2,7 +2,7 @@ body {
   background-color: black;
 }
 
-#box {
+.box {
   width: 100%;
   height: 100%;
   text-align: center;
@@ -11,17 +11,31 @@ body {
   justify-content: center;
 }
 
-#alert {
-  opacity: 0;
+.fade {
   transition: opacity 0.7s linear;
 }
 
-#alert.show {
+.alert {
+  opacity: 0;
+}
+
+.alert.show {
   opacity: 1;
 }
 
-#message {
+.message {
   position: absolute;
+  opacity: 0;
+}
+
+.message.show {
+  opacity: 1;
+}
+
+.messageBox {
+  color: #fff;
+  text-align: center;
+  text-shadow: 1px 1px 20px #000, 0 0 1em #000, 0 0 0.2em #000;
 }
 
 .messageFlex {
