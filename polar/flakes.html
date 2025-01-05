@@ -11,8 +11,10 @@
 
 <style>
 @font-face {
-  font-family: 'Bradley Gratis';
-    src: url('Bradley Gratis.ttf'),
+    font-family: 'Bradley Gratis'; /* Name of the font */
+    src: url('BradleyGratis.woff2') format('woff2'), /* WOFF2 for modern browsers */
+         url('BradleyGratis.woff') format('woff'), /* WOFF for broader compatibility */
+         url('BradleyGratis.ttf') format('truetype'); /* TTF as fallback */
     font-weight: normal;
     font-style: normal;
 }
