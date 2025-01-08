@@ -1,0 +1,61 @@
+<html>
+<head>
+<title>ALERT 3</title>
+
+<link href="../alerts.css" rel="stylesheet">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../alerts.js"></script>
+
+<style>
+@font-face {
+    font-family: 'Bradley Gratis'; /* Name of the font */
+    src: url('BradleyGratis.woff2') format('woff2'), /* WOFF2 for modern browsers */
+         url('BradleyGratis.woff') format('woff'), /* WOFF for broader compatibility */
+         url('BradleyGratis.ttf') format('truetype'); /* TTF as fallback */
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+  font-family: 'Bradley Gratis';
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+</style>
+</head>
+
+<body>
+
+<div id="box">
+  <div id="alert" class="alert fade">
+    <div class="messageFlex" style="font-family: 'Bradley Gratis', sans-serif; font-weight: 700;">
+      <video class="background" muted playsinline style="width: 1920px; height: 1080px;">
+        <source src="Where-are-you.webm" type="video/webm">
+      </video>
+      <div class="message fade" style="width: 413px; height: 150px; display: flex; align-items: center; padding-top: 0px; margin-bottom: 425px; padding-bottom: 0px;">
+        <div class="picture"></div>
+        <div class="messageText" style="flex: 1 1"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  startAlerts({
+    after: "2024-12-25 00:00:00",
+    priority: 2,
+    numalerts: 3,
+    slots: [{
+      id: "#alert",
+      message: {
+        timeShow: 2,
+      }
+    }],
+  })
+})()
+</script>
+</body>
+</html>
