@@ -101,8 +101,11 @@ class AlertSlot {
 
     this.message = options.message || {}
 
-    this.message.timeShow = this.message.timeShow || 0
-    this.message.timeHide = this.message.timeHide || null
+    const timeShow = parseFloat(this.messageRoot.getAttribute("data-timeshow"))
+    const timeHide = parseFloat(this.messageRoot.getAttribute("data-timehide"))
+
+    this.message.timeShow = isNaN(timeShow) ? 0.0 : timeShow;
+    this.message.timeHide = isNaN(timeHide) ? null : timeHide;
 
     this.alert.onTimeUpdate(this.handleTimeUpdate.bind(this))
   }
