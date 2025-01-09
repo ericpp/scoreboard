@@ -217,12 +217,14 @@ async function startAlerts(config) {
   const app = new PaymentTracker(config)
 
   const slots = (config.slots || []).map(slot => new AlertSlot(slot.id, slot))
+  let curSlot = 0
 
   if (slots.length === 0) {
     slots.push(new AlertSlot("#alert"))
   }
 
   const alertQueue = []
+  let paymentCounter = 0;
 
   const init = () => {
     const url = getUrlConfig(document.location)
@@ -274,11 +276,49 @@ async function startAlerts(config) {
       return // filter out streams, basically
     }
 
-    if (config.priority !== undefined && config.priority !== (payment.creation_date % config.numalerts)) {
+    paymentCounter++
+
+    if (config.priority !== undefined && config.priority !== (paymentCounter % config.numalerts)) {
       return // show a porition of the payments based on priority and numalerts
     }
 
     alertQueue.push(payment)
+  }
+
+  const getAvailableSlots = (slots, activeSlots) => {
+    const availableSlots = slots.filter(x => !x.playing())
+
+    if (availableSlots.length === 0) {
+      return [] // none available
+    }
+
+    if (activeSlots !== undefined && activeSlots <= slots.length - availableSlots.length) {
+      return [] // too many slots taken
+    }
+
+    return availableSlots
+  }
+
+  const selectSlot = (slots, availableSlots, curSlot) => {
+    if (config.randomizeSlots === undefined || config.randomizeSlots) {
+      return { slot: availableSlots[Math.floor(Math.random() * availableSlots.length)], newSlot: curSlot }
+    }
+
+    const slot = availableSlots[curSlot]
+    const newSlot = (curSlot + 1) % slots.length
+
+    return { slot, newSlot }
+  }
+
+  const getRemoteInfo = (payment) => {
+      return (payment.remote_feed) ? `${payment.remote_feed} - ${payment.remote_item}` : ""
+  }
+
+  const defaultMessageRenderer = (slot, payment) => {
+    const sats = payment.sats.toLocaleString()
+    const userMessage = config.showMessages ? payment.message : getRemoteInfo(payment)
+
+    slot.showMessage(`${sats} sat ${payment.type} from ${payment.sender_name}`, userMessage, payment.picture)
   }
 
   const handleAlertQueue = () => {
@@ -286,33 +326,21 @@ async function startAlerts(config) {
       return
     }
 
-    const availableSlots = slots.filter(x => !x.playing())
+    const availableSlots = getAvailableSlots(slots, config.activeSlots)
 
     if (availableSlots.length === 0) {
       return
     }
 
-    const slot = availableSlots[Math.floor(Math.random() * availableSlots.length)]
+    const { slot, newSlot } = selectSlot(slots, availableSlots, curSlot)
+    curSlot = newSlot
 
     const payment = alertQueue.shift()
-    const sats = payment.sats.toLocaleString()
-    const userMessage = config.showMessages ? payment.message : getRemoteInfo(payment)
+    const renderer = config.messageRender || defaultMessageRenderer
 
-    if (config.messageRender) {
-      config.messageRender(slot, payment)
-    }
-    else {
-      slot.showMessage(`${sats} sat ${payment.type} from ${payment.sender_name}`, userMessage, payment.picture)
-    }
+    renderer(slot, payment)
   }
 
-  const getRemoteInfo = (payment) => {
-      if (!payment.remote_feed) {
-        return ""
-      }
-
-      return `${payment.remote_feed} - ${payment.remote_item}`
-  }
 
   init()
 }
