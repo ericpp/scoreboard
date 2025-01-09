@@ -1,0 +1,103 @@
+<html>
+<head>
+<title>Flakes</title>
+
+<link href="../alerts.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../alerts.js"></script>
+
+<style>
+@font-face {
+    font-family: 'Bradley Gratis'; /* Name of the font */
+    src: url('BradleyGratis.woff2') format('woff2'), /* WOFF2 for modern browsers */
+         url('BradleyGratis.woff') format('woff'), /* WOFF for broader compatibility */
+         url('BradleyGratis.ttf') format('truetype'); /* TTF as fallback */
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+  font-family: 'Bradley Gratis';
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+</style>
+</head>
+
+<body>
+
+<div style="display: flex; justify-content: center; align-items: center; height: 100%">
+  <div class="box" style="margin: auto; margin-top: auto; border: 1px solid #222;">
+    <div id="alert1" class="alert fade" style="position: absolute;">
+      <div class="messageFlex">
+        <video class="background" muted playsinline style="width: 1720px;">
+          <source src="Lamp-post.webm" type="video/webm">
+        </video>
+        <div class="message fade" style="width: 450px; height: 135px; display: flex; align-items: center; padding-top: 0px; margin-bottom: 415px; padding-bottom: 0px;">
+          <div class="picture"></div>
+          <div class="messageText" style="flex: 1 1"></div>
+        </div>
+      </div>
+    </div>
+    <div id="alert2" class="alert fade" style="position: absolute;">
+      <div class="messageFlex">
+        <video class="background" muted playsinline style="width: 665px;">
+          <source src="Snow-Globe_2.webm" type="video/webm">
+        </video>
+        <div class="message fade" style="width: 480px; height: 194px; display: flex; align-items: center; padding-top: 0px; margin-bottom: 251px; padding-bottom: 0px;">
+          <div class="picture"></div>
+          <div class="messageText" style="flex: 1 1"></div>
+        </div>
+      </div>
+    </div>
+    <div id="alert3" class="alert fade" style="position: absolute;">
+      <div class="messageFlex">
+        <video class="background" muted playsinline style="width: 1920px;">
+          <source src="Where-are-you.webm" type="video/webm">
+        </video>
+        <div class="message fade" style="width: 400px; height: 150px; display: flex; align-items: center; padding-top: 0px; margin-bottom: 425px; padding-bottom: 0px;">
+          <div class="picture"></div>
+          <div class="messageText" style="flex: 1 1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  const slots = [
+    {
+      id: "#alert1",
+      message: {
+        timeShow: 3,
+      },
+    },
+    {
+      id: "#alert2",
+      message: {
+        timeShow: 2,
+      },
+    },
+    {
+      id: "#alert3",
+      message: {
+        timeShow: 2,
+      },
+    },
+  ]
+
+  startAlerts({
+    after: "2024-12-25 00:00:00",
+    slots,
+    activeSlots: 1,
+    randomizeSlots: false,
+  })
+})()
+</script>
+
+</body>
+</html>
