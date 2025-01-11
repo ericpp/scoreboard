@@ -51,7 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let params = (new URL(document.location)).searchParams
 
-    app.setFilter('after', params.get("after") || "2024-09-21 00:00:00 -0500")
+    const dt = new Date()
+    dt.setDate(dt.getDate() - 30)
+    const lastMonth = dt.toISOString().slice(0, 10)
+
+    app.setFilter('after', params.get("after") || lastMonth)
     app.setFilter('before', params.get("before"))
 
     app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
