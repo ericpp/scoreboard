@@ -60,6 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
 
+    const enableCsv = params.get('csv')
+    const csvData = [
+        ['action','app_name','creation_date','identifier','message','podcast','remote_feed','remote_item','sats','sender_name','type'],
+    ]
+
     const addBoost = (boost, old) => {
         if (boost.action != "boost") {
             return
@@ -109,11 +114,36 @@ document.addEventListener('DOMContentLoaded', () => {
             li.classList.add("highlight")
         })
 
+        if (enableCsv) {
+            csvData.push([
+boost.action,boost.app_name,boost.creation_date,boost.identifier,boost.message,boost.podcast,boost.remote_feed,boost.remote_item,boost.sats,boost.sender_name,boost.type,
+            ])
+        }
+
         setTimeout(() => li.classList.remove("added"), 1)
     }
 
-    app.setListener(addBoost)
+    if (enableCsv) {
+        let lastCount = 0
+        let done = false
 
+        let interval = setInterval(() => {
+            if(lastCount !== csvData.length) {
+                lastCount = csvData.length
+                return
+            }
+
+            let anchor = document.createElement('a');
+            anchor.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData.join("\r\n"));
+            anchor.target = '_blank';
+            anchor.download = 'boosts.csv';
+            anchor.click();
+
+            clearInterval(interval)
+        }, 1000)
+    }
+
+    app.setListener(addBoost)
     app.start()
 })
 
