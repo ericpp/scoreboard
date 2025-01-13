@@ -133,9 +133,12 @@ boost.action,boost.app_name,boost.creation_date,boost.identifier,boost.message,b
                 return
             }
 
-            let anchor = document.createElement('a');
-            anchor.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData.join("\r\n"));
-            anchor.target = '_blank';
+            const csvContent = csvData.map(e => '"' + e.join('"' + "\t" + '"') + '"').join("\n")
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
             anchor.download = 'boosts.csv';
             anchor.click();
 
