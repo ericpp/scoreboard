@@ -58,7 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     app.setFilter('after', params.get("after") || lastMonth)
     app.setFilter('before', params.get("before"))
 
-    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
+    const podcast = params.get("podcast")
+
+    if (podcast) {
+        app.setFilter('podcast', podcast)
+    }
+    else {
+        app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
+    }
 
     const enableCsv = params.get('csv')
     const csvData = [

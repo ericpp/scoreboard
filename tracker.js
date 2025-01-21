@@ -134,7 +134,9 @@ function PaymentTracker(config) {
       }
     }
 
-    if (this.filters.podcast && this.filters.podcast != payment.podcast) {
+    if (this.filters.podcast && payment.podcast &&
+      payment.podcast.toLowerCase().indexOf(this.filters.podcast.toLowerCase()) === -1
+    ) {
       return
     }
 
