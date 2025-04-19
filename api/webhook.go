@@ -113,11 +113,16 @@ func SaveToDatabase(invoice IncomingInvoice) error {
         episode_guid = val
     }
 
+    event_guid := ""
+    if val, ok := tlv["eventGuid"].(string); ok {
+        event_guid = val
+    }
+
     insertSql :=
     `INSERT INTO invoices
-        (amount, boostagram, comment, created_at, creation_date, description, identifier, payer_name, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action)
+        (amount, boostagram, comment, created_at, creation_date, description, identifier, payer_name, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action, event_guid)
     VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (identifier) DO NOTHING`
 
     _, err = db.Exec(
@@ -142,6 +147,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
         guid,
         episode_guid,
         action,
+        event_guid
     )
 
     if err != nil {
