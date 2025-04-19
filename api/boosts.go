@@ -63,6 +63,7 @@ func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
 
     podcast, hasPodcast := query["q[podcast]"]
     eventGuid, hasEventGuid := query["q[eventGuid]"]
+    episodeGuid, hasEpisodeGuid := query["q[episodeGuid]"]
     placeholders := []string{}
 
     if hasPodcast {
@@ -82,6 +83,16 @@ func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
             }
             params = append(params, val)
             placeholders = append(placeholders, fmt.Sprintf(`event_guid = $%d`, len(params)))
+        }
+    }
+
+    if hasEpisodeGuid {
+        for _, val := range strings.Split(episodeGuid, ",") {
+            if val == "" {
+                continue
+            }
+            params = append(params, val)
+            placeholders = append(placeholders, fmt.Sprintf(`episode_guid = $%d`, len(params)))
         }
     }
 
@@ -190,6 +201,16 @@ func Handler(w http.ResponseWriter, r *http.Request) {
         } else {
             // Join multiple values with comma
             query["q[eventGuid]"] = strings.Join(r.Form["eventGuid"], ",")
+        }
+    }
+
+    // Handle multiple episodeGuid values
+    if len(r.Form["episodeGuid"]) > 0 {
+        if len(r.Form["episodeGuid"]) == 1 {
+            query["q[episodeGuid]"] = r.Form["episodeGuid"][0]
+        } else {
+            // Join multiple values with comma
+            query["q[episodeGuid]"] = strings.Join(r.Form["episodeGuid"], ",")
         }
     }
 

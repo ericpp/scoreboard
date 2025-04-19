@@ -409,7 +409,11 @@ document.addEventListener('DOMContentLoaded', () => {
     app.setFilter('after', params.get("after") || "2024-06-24 00:00:00 -0500")
     app.setFilter('before', params.get("before"))
 
-    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
+    // app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
+
+    app.setFilter('podcasts', ["The Satellite Skirmish", "Homegrown Hits"])
+    app.setFilter('episodeGuids', ["37c7b3a8-b782-4368-8b91-35c944cefdde"])
+    app.setFilter('eventGuids', ["a66aa772-ee75-43d1-b5e6-2919f794b895"]) 
 
     app.setListener((payment, old) => {
         latestBoost.add(payment, old)

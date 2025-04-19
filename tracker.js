@@ -142,9 +142,10 @@ function PaymentTracker(config) {
     // podcast or eventGuid filter must match if either/both are set
     if (
       this.type == 'boost' &&
-      (this.filters.podcasts || this.filters.eventGuids) &&
+      (this.filters.podcasts || this.filters.eventGuids || this.filters.episodeGuids) &&
       (!this.filters.podcasts || this.filters.podcasts.findIndex(p => payment.podcast?.toLowerCase().indexOf(p.toLowerCase()) !== -1) === -1) &&
-      (!this.filters.eventGuids || this.filters.eventGuids.findIndex(e => payment.eventGuid === e) === -1)
+      (!this.filters.eventGuids || this.filters.eventGuids.findIndex(e => payment.eventGuid === e) === -1) &&
+      (!this.filters.episodeGuids || this.filters.episodeGuids.findIndex(e => payment.episodeGuid === e) === -1)
     ) {
       return
     }
@@ -229,6 +230,7 @@ function NostrWatcher(relays) {
           app_name: boost.app_name || 'Unknown',
           podcast: boost.podcast || 'Unknown',
           event_guid: boost.eventGuid || null,
+          episode_guid: boost.episodeGuid || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
           ...await addRemoteInfo(boost),
@@ -288,6 +290,7 @@ function NostrWatcher(relays) {
           app_name: 'Nostr',
           podcast: 'Nostr',
           event_guid: null,
+          episode_guid: null,
           sats: Math.floor(value_msat_total / 1000),
           message: event.content,
         }, isOld)
@@ -386,6 +389,10 @@ function StoredBoosts(filters) {
         query.set("eventGuid", filters.eventGuids.join(","))
       }
 
+      if (filters.episodeGuids) {
+        query.set("episodeGuid", filters.episodeGuids.join(","))
+      }
+
       if (filters.before) {
         query.set("created_at_lt", filters.before)
       }
@@ -419,6 +426,7 @@ function StoredBoosts(filters) {
           app_name: boost.app_name || 'Unknown',
           podcast: boost.podcast || 'Unknown',
           event_guid: boost.eventGuid || null,
+          episode_guid: boost.episodeGuid || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
           ...await addRemoteInfo(boost),
