@@ -482,7 +482,10 @@ document.addEventListener('DOMContentLoaded', () => {
     app.setFilter('after', params.get("after") || "2024-09-21 00:00:00 -0500")
     app.setFilter('before', params.get("before"))
 
-    app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
+    // app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
+
+    app.setFilter('podcasts', ["Autumn Rust"])
+    app.setFilter('eventGuids', ["ac6d521b-f3b3-4397-b6d2-13d50daa244e", "7273eba9-d12d-41d0-8efa-ec777aab446a"])
 
     app.setListener((payment, old) => {
         latestBoost.add(payment, old)
