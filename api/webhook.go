@@ -147,7 +147,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
         guid,
         episode_guid,
         action,
-        event_guid
+        event_guid,
     )
 
     if err != nil {
