@@ -148,7 +148,7 @@ function PaymentTracker(config) {
     }
 
     // podcast or eventGuid filter must match if either/both are set
-    const podcastMatch = (this.filters.podcasts && this.filters.podcasts.findIndex(p => payment.podcast?.toLowerCase().indexOf(p.toLowerCase()) !== -1) > -1)
+    const podcastMatch = (this.filters.podcasts && this.filters.podcasts.findIndex(p => payment.podcast?.toLowerCase().indexOf(p?.toLowerCase()) !== -1) > -1)
     const eventGuidMatch = (this.filters.eventGuids && this.filters.eventGuids.findIndex(e => payment.event_guid === e) > -1)
     const episodeGuidMatch = (this.filters.episodeGuids && this.filters.episodeGuids.findIndex(e => payment.episode_guid === e) > -1)
 
