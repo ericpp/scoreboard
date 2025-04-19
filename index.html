@@ -1,20 +1,424 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Boosts in Space!</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
-    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
-    <link href="https://fonts.cdnfonts.com/css/joystix" rel="stylesheet">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
-    <style>
-    body {
-        padding: 0; margin: 0;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boost Board - Gaming Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #ff3e3e;
+      --primary-dark: #c62828;
+      --secondary: #42e2f5;
+      --tertiary: #f7d51d;
+      --dark-bg: #0f0f19;
+      --dark-card: #1a1a2e;
+      --dark-accent: #232344;
+      --text-light: #e1e1e1;
+      --text-muted: #9ca3af;
+      --border-dark: #333370;
+      --pixel-size: 4px;
     }
-    </style>
 
-    <script src="tracker.js"></script>
-    <script src="index.js"></script>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @keyframes backgroundScroll {
+      from { background-position: 0 0; }
+      to { background-position: 100% 100%; }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes glitch {
+      0% { text-shadow: 3px 0 var(--secondary), -3px 0 var(--tertiary); }
+      25% { text-shadow: -3px 0 var(--secondary), 3px 0 var(--tertiary); }
+      50% { text-shadow: 3px 0 var(--tertiary), -3px 0 var(--secondary); }
+      75% { text-shadow: -3px 0 var(--tertiary), 3px 0 var(--secondary); }
+      100% { text-shadow: 3px 0 var(--secondary), -3px 0 var(--tertiary); }
+    }
+
+    body {
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+      line-height: 1.6;
+      color: var(--text-light);
+      background-color: var(--dark-bg);
+      background-image:
+        linear-gradient(to bottom, rgba(15, 15, 25, 0.8), rgba(15, 15, 25, 0.8)),
+        repeating-linear-gradient(0deg, transparent, transparent var(--pixel-size), var(--dark-accent) var(--pixel-size), var(--dark-accent) calc(var(--pixel-size) * 2));
+      background-size: 200% 200%;
+      animation: backgroundScroll 60s ease infinite alternate;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .container {
+      background-color: var(--dark-card);
+      border: 4px solid var(--primary);
+      border-radius: 0;
+      position: relative;
+      padding: 2.5rem;
+      box-shadow:
+        0 0 0 4px var(--dark-card),
+        0 0 0 8px var(--border-dark),
+        0 0 20px rgba(229, 57, 53, 0.6);
+    }
+
+    .container::before,
+    .container::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: var(--primary);
+    }
+
+    .container::before {
+      top: -4px;
+      left: -4px;
+    }
+
+    .container::after {
+      bottom: -4px;
+      right: -4px;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 4px solid var(--primary-dark);
+      padding-bottom: 1rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 2.5rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+      text-shadow: 4px 4px 0px rgba(0,0,0,0.8);
+      letter-spacing: 2px;
+    }
+
+    .tagline {
+      font-size: 1.2rem;
+      color: var(--tertiary);
+      margin-bottom: 1rem;
+    }
+
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .project-card {
+      background-color: var(--dark-accent);
+      border: 2px solid var(--border-dark);
+      overflow: hidden;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .project-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    }
+
+    .project-header {
+      position: relative;
+      background-color: var(--primary-dark);
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .project-title {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 1rem;
+      color: var(--text-light);
+      text-shadow: 2px 2px 0px rgba(0,0,0,0.8);
+    }
+
+    .project-date {
+      font-size: 1rem;
+      color: var(--text-light);
+      background-color: var(--dark-accent);
+      padding: 0.25rem 0.5rem;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
+
+    .project-content {
+      padding: 1.5rem;
+    }
+
+    .project-card a {
+      color: var(--text-light);
+      text-decoration: none;
+      display: block;
+      padding: 0.5rem 0;
+      border-bottom: 1px dashed var(--border-dark);
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .project-card a:hover {
+      color: var(--secondary);
+      transform: translateX(10px);
+    }
+
+    .project-card a::before {
+      content: "► ";
+      color: var(--primary);
+    }
+
+    .category {
+      margin-top: 3rem;
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .category-icon {
+      font-size: 2rem;
+      margin-right: 1rem;
+      color: var(--tertiary);
+    }
+
+    .category-title {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 1.5rem;
+      color: var(--tertiary);
+      text-shadow: 3px 3px 0px rgba(0,0,0,0.8);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 3rem;
+      padding: 1.5rem;
+      background-color: var(--dark-accent);
+      border: 2px solid var(--border-dark);
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 1.5rem;
+      color: var(--secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    .cta-button {
+      display: block;
+      width: 100%;
+      margin-top: 2rem;
+      padding: 1rem;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 1rem;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 0 var(--primary-dark);
+    }
+
+    .cta-button:hover {
+      background-color: var(--secondary);
+      animation: pulse 1s infinite;
+    }
+
+    .cta-button:active {
+      transform: translateY(4px);
+      box-shadow: none;
+    }
+
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 1rem;
+      padding-top: 1rem;
+      border-top: 2px dashed var(--border-dark);
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+        font-size: 18px;
+      }
+
+      .container {
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      .project-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        flex-direction: column;
+        gap: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <header>
+      <h1>BOOST BOARDS</h1>
+    </header>
 
+    <div class="category">
+      <div class="category-header">
+        <div class="category-icon">🎮</div>
+        <h2 class="category-title">MAIN QUESTS</h2>
+      </div>
+
+      <div class="project-grid">
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">SATELLITE SPOTLIGHT</h3>
+            <span class="project-date">MAY 2025</span>
+          </div>
+          <div class="project-content">
+            <a href="spotlight/">Start Mission</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">POLAR EMBRACE</h3>
+            <span class="project-date">JAN 2025</span>
+          </div>
+          <div class="project-content">
+            <a href="polar/">Boost Board</a>
+            <a href="polar/alerts.html?test=1">Combined Alerts</a>
+            <a href="polar/alert1.html?test=1">Alert 1</a>
+            <a href="polar/alert2.html?test=1">Alert 2</a>
+            <a href="polar/alert3.html?test=1">Alert 3</a>
+            <a href="polar/flakes.html?test=1">Snowflake Alerts</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">AUTUMN RUST</h3>
+            <span class="project-date">SEP 2024</span>
+          </div>
+          <div class="project-content">
+            <a href="rust/">Boost Board</a>
+            <a href="rust/alert.html?test=1">Boost Alert</a>
+            <a href="rust/maple.html?test=1">Maple Alert</a>
+            <a href="rust/tarot.html?test=1">Tarot Alert</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">THE SATELLITE SKIRMISH</h3>
+            <span class="project-date">JUN 2024</span>
+          </div>
+          <div class="project-content">
+            <a href="satskirmish/">Boost Board</a>
+            <a href="satskirmish/alerts.html?test=1">Alerts</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">12 RODS</h3>
+            <span class="project-date">APR 2024</span>
+          </div>
+          <div class="project-content">
+            <a href="12rods/">Boost Board</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category">
+      <div class="category-header">
+        <div class="category-icon">🧩</div>
+        <h2 class="category-title">SIDE QUESTS</h2>
+      </div>
+
+      <div class="project-grid">
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">BOOSTAGRAM BALL LIVE</h3>
+            <span class="project-date">DEC 2024</span>
+          </div>
+          <div class="project-content">
+            <a href="bball/index.html?test=1">Boostagram Ball Alerts</a>
+            <a href="tunestr/index.html?test=1">Tunestr Alerts</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">MALL</h3>
+            <span class="project-date">SEP 2024</span>
+          </div>
+          <div class="project-content">
+            <a href="cult/">Boost Board</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">HOMEGROWN HITS</h3>
+          </div>
+          <div class="project-content">
+            <a href="hgh/halloween.html?test=1">Halloween Alerts</a>
+            <a href="hgh/winter.html?test=1">Winter Alerts</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <h3 class="project-title">GOAT MOCKUP</h3>
+            <span class="project-date">BETA</span>
+          </div>
+          <div class="project-content">
+            <a href="goat/goat.html">Goat Board</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <a href="list/" class="cta-button">VIEW YOUR BOOST INVENTORY</a>
+  </div>
 </body>
 </html>
