@@ -61,6 +61,34 @@ func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
         where = append(where, fmt.Sprintf(`identifier <> $%d`, len(params)))
     }
 
+    podcast, hasPodcast := query["q[podcast]"]
+    eventGuid, hasEventGuid := query["q[eventGuid]"]
+    placeholders := []string{}
+
+    if hasPodcast {
+        for _, val := range strings.Split(podcast, ",") {
+            if val == "" {
+                continue
+            }
+            params = append(params, "%"+val+"%")
+            placeholders = append(placeholders, fmt.Sprintf(`podcast ILIKE $%d`, len(params)))
+        }
+    }
+
+    if hasEventGuid {
+        for _, val := range strings.Split(eventGuid, ",") {
+            if val == "" {
+                continue
+            }
+            params = append(params, val)
+            placeholders = append(placeholders, fmt.Sprintf(`event_guid = $%d`, len(params)))
+        }
+    }
+
+    if len(placeholders) > 0 {
+        where = append(where, fmt.Sprintf(`(%s)`, strings.Join(placeholders, " OR ")))
+    }
+
     if val, ok := query["items"]; ok {
         num, err := strconv.Atoi(val)
         if err != nil {
@@ -117,6 +145,11 @@ func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
+    // Parse the form data to populate r.Form
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Error parsing form data", http.StatusBadRequest)
+        return
+    }
 
     query := make(map[string]string)
 
@@ -138,6 +171,26 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
     if r.FormValue("created_at_gt") != "" {
         query["q[created_at_gt]"] = r.FormValue("created_at_gt")
+    }
+
+    // Handle multiple podcast values
+    if len(r.Form["podcast"]) > 0 {
+        if len(r.Form["podcast"]) == 1 {
+            query["q[podcast]"] = r.Form["podcast"][0]
+        } else {
+            // Join multiple values with comma
+            query["q[podcast]"] = strings.Join(r.Form["podcast"], ",")
+        }
+    }
+
+    // Handle multiple eventGuid values
+    if len(r.Form["eventGuid"]) > 0 {
+        if len(r.Form["eventGuid"]) == 1 {
+            query["q[eventGuid]"] = r.Form["eventGuid"][0]
+        } else {
+            // Join multiple values with comma
+            query["q[eventGuid]"] = strings.Join(r.Form["eventGuid"], ",")
+        }
     }
 
     boosts, err := GetBoosts(query)

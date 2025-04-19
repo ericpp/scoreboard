@@ -42,6 +42,11 @@ function PaymentTracker(config) {
       this.lastBoostAt = value
     }
 
+    if (name == 'podcast') {
+      name = 'podcasts'
+      value = [value]
+    }
+
     this.filters[name] = value
   }
 
@@ -134,8 +139,19 @@ function PaymentTracker(config) {
       }
     }
 
-    if (this.filters.podcast && payment.podcast &&
-      payment.podcast.toLowerCase().indexOf(this.filters.podcast.toLowerCase()) === -1
+    // podcast and eventGuid filter should both be considered
+    if (this.filters.podcasts && this.filters.eventGuids &&
+        (!payment.podcast || this.filters.podcasts.findIndex(p => p.toLowerCase() === payment.podcast.toLowerCase()) === -1) &&
+        (!payment.eventGuid || this.filters.eventGuids.indexOf(payment.eventGuid) === -1)) {
+        return
+    }
+    else if (this.filters.podcasts && payment.podcast &&
+      this.filters.podcasts.findIndex(p => p.toLowerCase() === payment.podcast.toLowerCase()) === -1
+    ) {
+      return
+    }
+    else if (this.filters.eventGuids && payment.eventGuid &&
+      this.filters.eventGuids.indexOf(payment.eventGuid) === -1
     ) {
       return
     }
@@ -366,6 +382,18 @@ function StoredBoosts(filters) {
       const query = new URLSearchParams()
       query.set("page", page)
       query.set("items", items)
+
+      if (filters.podcasts) {
+        filters.podcasts.forEach(podcast => {
+          query.set("podcast", podcast)
+        })
+      }
+
+      if (filters.eventGuids) {
+        filters.eventGuids.forEach(eventGuid => {
+          query.set("eventGuid", eventGuid)
+        })
+      }
 
       if (filters.before) {
         query.set("created_at_lt", filters.before)
