@@ -1,0 +1,510 @@
+<html>
+<head>
+<title>Polar board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../board.js"></script>
+
+<style>
+
+:root {
+  --flap-background: #000;
+  --flap-font-size: 1rem;
+  --flap-margin: .1rem;
+  --flap-min-width: 0.6rem;
+}
+
+html {
+/*  font-size: 10px;*/
+}
+
+body {
+  background-color: #111;
+  color: #FFF;
+}
+
+h1 {
+  font-size: 1rem;
+  font-family: monospace;
+  font-weight: normal;
+  text-align: center;
+}
+
+/*ANONYMOUS PODCAST GURU USER*/
+.splitflap {
+  position: relative;
+  min-width: var(--flap-min-width);
+  height: var(--flap-font-size);
+  margin-right: 1px;
+  margin-bottom: 1px;
+  line-height: var(--flap-font-size);
+  font-size: var(--flap-font-size);
+  font-family: Monospace;
+  text-align: center;
+  color: white;
+}
+
+.line {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.top {
+  position: relative;
+  height: 50%;
+  width: 100%;
+  background-color: var(--flap-background);
+  border-radius: var(--flap-margin) var(--flap-margin) 0 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bottom {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  margin-top: -84%;
+  border-radius: var(--flap-margin) var(--flap-margin) var(--flap-margin) var(--flap-margin);
+  z-index: -1;
+  background-color: black;
+  background-image: linear-gradient(rgba(59, 182, 235, 0), var(--flap-background));
+  transform-origin: center;
+}
+
+.nextHalf {
+  position: relative;
+  height: 50%;
+  width: 100%;
+  margin-top: -165%;
+  overflow: hidden;
+  border-radius: var(--flap-margin) var(--flap-margin) 0 0;
+  z-index: 2;
+  background-color: black;
+  background-image: linear-gradient(var(--flap-background), rgba(59, 182, 235, 0));
+  transform-origin: bottom;
+}
+
+.nextFull {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background-color: var(--flap-background);
+  margin-top: -84%;
+  border-radius: var(--flap-margin) var(--flap-margin) var(--flap-margin) var(--flap-margin);
+  z-index: -3;
+}
+
+/* bottom flap */
+.flip1 {
+  animation: flip1 ease-in 1;
+  animation-duration: 1s;
+}
+
+/* top flap */
+.flip2 {
+  animation: flip2 ease-out 1;
+  animation-duration: 1s;
+}
+
+.noFlap {
+  background-color: var(--flap-background);
+}
+
+@keyframes flip1 {
+  0% {
+    transform: rotateX(0deg);
+    background-color: var(--flap-background);
+  }
+  50% {
+    transform: rotateX(90deg);
+    background-color: black;
+  }
+  100% {
+    transform: rotateX(90deg);
+  }
+}
+
+@keyframes flip2 {
+  0% {
+    transform: rotateX(-90deg);
+  }
+  50% {
+    transform: rotateX(-90deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+    background-color: var(--flap-background);
+  }
+}
+
+/* md */
+@media (min-width: 768px) {
+  html {
+    font-size: 32px;
+  }
+}
+
+/* lg */
+@media (min-width: 1024px) {
+  html {
+    font-size: 48px;
+  }
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="totalSats">
+  <h1>TOTAL SATS</h1>
+</div>
+
+<div class="latestBoost">
+  <h1>LATEST BOOST</h1>
+</div>
+
+<div class="topBoosts">
+  <h1>TOP BOOSTS</h1>
+</div>
+
+<div class="topApps">
+  <h1>TOP APPS</h1>
+</div>
+
+
+<script>
+speed = .1 // seconds
+
+function Board(root, numLines, columnSizes, columnLetters) {
+  this.lines = []
+
+  for (let idx = 0; idx < numLines; idx++) {
+    this.lines.push(
+      new ColumnLine(root, columnSizes, columnLetters)
+    )
+  }
+
+  this.getLine = (num) => {
+    return this.lines[num]
+  }
+
+  this.fillMessage = (messages) => {
+    const regex = new RegExp(".{1," + columnSizes[0] + "}", "g")
+    const split = []
+
+    let line = 0
+
+    // for each message
+    for (var x = 0; x < messages.length; x++) {
+      let size = columnSizes[0]
+      let words = messages[x].split(/\s/)
+
+      // for each word in the message
+      for (var y = 0; y < words.length; y++) {
+        let wordlen = words[y].length
+        let wrap
+        let z = 0
+
+        // split word by maximum column size
+        while ((wrap = regex.exec(words[y])) !== null) {
+          let len = wrap[0].length
+
+          if (!split[line]) {
+            // new line
+            split[line] = wrap[0]
+          }
+          else if (split[line].length + len + 1 > columnSizes[0]) {
+            // chunk would overflow line: add to new line
+            line++
+            split[line] = wrap[0]
+          }
+          else if (wrap[0]) {
+            // add to existing line
+            if (z === 0) {
+              // add space if new word
+              split[line] += " "
+            }
+
+            split[line] += wrap[0]
+          }
+
+          z++
+        }
+      }
+
+      line++
+      line++
+    }
+
+    for (var idx = 0; idx < this.lines.length; idx++) {
+      const values = [split[idx] || ""]
+      this.lines[idx].setValues(values, false)
+    }
+  }
+
+  this.start = () => {
+    setInterval(() => {
+      this.lines.forEach(line => line.flip())
+    }, speed * 1000)
+  }
+}
+
+function ColumnLine(root, columnSizes, columnLetters) {
+  this.columns = []
+  this.columnSizes = columnSizes
+  this.columnLetters = columnLetters
+
+  this.init = () => {
+    let el = document.createElement("div")
+    el.classList.add("line")
+    el = root.appendChild(el)
+
+    this.columnSizes.forEach((size, x) => {
+      if (this.columnSizes.length > 1) {
+        size++ // column separator
+      }
+
+      this.columns[x] = new Flaps(el, size, this.columnLetters[x])
+    })
+  }
+
+  this.flip = () => {
+    this.columns.forEach(flap => flap.flip())
+  }
+
+  this.setValues = (values, lastRight) => {
+    values.forEach((value, x) => {
+      const alignRight = (lastRight && x == values.length - 1)
+      this.columns[x].setString(value, alignRight)
+    })
+  }
+
+  this.init()
+}
+
+function Flaps(root, numFlaps, letters) {
+  this.numFlaps = numFlaps
+  this.flaps = []
+
+  this.init = () => {
+    for (var x = 0; x < this.numFlaps; x++) {
+      this.flaps[x] = new Flap(root, letters)
+    }
+  }
+
+  this.setString = (str, alignRight) => {
+    str = (str || "").toUpperCase()
+
+    if (!alignRight) {
+      // str = str.substring(0, numFlaps)
+      str = str.padEnd(numFlaps, " ")
+    }
+    else {
+      // str = str.substring(0, numFlaps)
+      str = str.padStart(numFlaps, " ")
+    }
+
+    this.flaps.forEach((flap, x) => this.flaps[x].setChar(str[x] || " "))
+  }
+
+  this.flip = () => {
+    this.flaps.forEach(flap => flap.flip())
+  }
+
+  this.isDone = () => {
+    return this.flaps.map(flap => flap.isDone()).every(x => x)
+  }
+
+  this.init()
+}
+
+function Flap(root, letters) {
+  this.top = null
+  this.bottom = null
+  this.nextHalf = null
+  this.nextFull = null
+  this.charIndex = 0
+  this.targetChar = " "
+
+  this.letters = letters || [
+    ' ',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+  ]
+
+  this.init = () => {
+    let el = document.createElement("div")
+    el.classList.add("splitflap")
+    el.innerHTML = '<div class="top"></div><div class="bottom"></div><div class="nextHalf"></div><div class="nextFull"></div>';
+    el = root.appendChild(el)
+
+    this.top = el.querySelector(".top")
+    this.bottom = el.querySelector(".bottom")
+    this.nextHalf = el.querySelector(".nextHalf")
+    this.nextFull = el.querySelector(".nextFull")
+
+    this.bottom.style.animationDuration = speed + "s"
+    this.nextHalf.style.animationDuration = speed + "s"
+  }
+
+  this.getChar = () => {
+    return this.letters[(this.charIndex == 0) ? this.letters.length - 1 : this.charIndex - 1]
+  }
+
+  this.flipIt = () => {
+    const char = this.getChar()
+    const nextChar = this.letters[this.charIndex]
+
+    if (this.top.innerHTML !== char)
+      this.top.innerHTML = char
+
+    if (this.bottom.innerHTML !== char)
+      this.bottom.innerHTML = char
+
+    if (this.nextFull.innerHTML !== nextChar)
+      this.nextFull.innerHTML = nextChar
+
+    if (this.nextHalf.innerHTML !== nextChar)
+      this.nextHalf.innerHTML = nextChar
+
+    this.bottom.classList.remove("flip1")
+    this.nextHalf.classList.remove("flip2")
+
+    this.bottom.offsetWidth = this.bottom.offsetWidth
+    this.nextHalf.offsetWidth = this.nextHalf.offsetWidth
+
+    this.nextHalf.classList.add("flip2")
+    this.bottom.classList.add("flip1")
+
+    if (this.charIndex > this.letters.length - 2) this.charIndex = 0
+    else this.charIndex++
+  }
+
+  this.dontFlipIt = () => {
+    const char = this.getChar()
+
+    if (char == this.top.innerHTML && char == this.bottom.innerHTML) {
+      return
+    }
+
+    this.bottom.classList.remove("flip2")
+
+    this.bottom.classList.add("noFlap")
+    this.nextHalf.classList.add("noFlap")
+
+    this.top.innerHTML = char
+    this.bottom.innerHTML = char
+  }
+
+  this.flip = () => {
+    if (this.isDone()) {
+      return this.dontFlipIt()
+    }
+
+    this.flipIt()
+  }
+
+  this.setChar = (char) => {
+    if (this.letters.indexOf(char) === -1) {
+      this.letters = [...this.letters, char]
+    }
+
+    this.targetChar = char
+  }
+
+  this.isDone = () => {
+    return this.nextFull.textContent == this.targetChar
+  }
+
+  this.init()
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const scoreSlots = 5
+    const displayTime = 3000
+
+    const letters = [
+      ' ',
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+      'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+      'Y', 'Z',
+    ]
+
+    const numbers = [
+      ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    ]
+
+    let totalDiv = document.querySelector(".totalSats");
+    let totalBoard = new Board(totalDiv, 1, [12], [numbers])
+
+    let totalSats = new SatCounter((total) => {
+      totalBoard.getLine(0).setValues([total], true)
+    })
+
+    let latestDiv = document.querySelector(".latestBoost");
+    let latestBoard = new Board(latestDiv, 8, [26], [letters])
+
+    let latestBoost = new LatestPayment((message) => {
+      latestBoard.fillMessage(message)
+    })
+
+
+    let boostDiv = document.querySelector(".topBoosts");
+    let boostBoard = new Board(boostDiv, scoreSlots, [2, 14, 7], [numbers, letters, numbers])
+
+    let topBoosters = new Scores('sender_name', scoreSlots, (score) => {
+      const sats = (score.sats || 0).toLocaleString()
+      boostBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
+    })
+
+    let appDiv = document.querySelector(".topApps");
+    let appBoard = new Board(appDiv, scoreSlots, [2, 14, 7], [numbers, letters, numbers])
+
+    let topApps = new Scores('app_name', scoreSlots, (score) => {
+      const sats = (score.sats || 0).toLocaleString()
+      appBoard.getLine(score.position - 1).setValues([`#${score.position}`, score.name, sats], true)
+    })
+
+    // let newPayments = new NewPayments('#newBoost', displayTime)
+
+    let app = new PaymentTracker()
+
+    app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
+    app.setNostrZapEvent("30311:3a02709eb796e5728b326fc800610a5425a34403ebc0a9a2acd60c641690eb0e:1727043230")
+
+    let params = (new URL(document.location)).searchParams
+
+    app.setFilter('after', params.get("after") || "2025-01-11 00:00:00 -0500")
+    app.setFilter('before', params.get("before"))
+
+    //app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
+
+    app.setFilter('podcasts', ["Polar Embrace"])
+    app.setFilter('eventGuids', ["6ec3cb1f-06c4-474b-8fc7-c2040d8c1968"])
+
+    app.setListener((payment, old) => {
+        latestBoost.add(payment, old)
+        topBoosters.add(payment, old)
+        topApps.add(payment, old)
+        totalSats.add(payment, old)
+        // newPayments.add(payment, old)
+    })
+
+    totalBoard.start()
+    boostBoard.start()
+    appBoard.start()
+    latestBoard.start()
+
+    app.start()
+})
+
+
+</script>
+
+</body>
+</html>
