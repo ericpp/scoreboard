@@ -131,7 +131,7 @@ function PaymentTracker(config) {
 
     if (this.filters.excludePodcasts) {
       const exclude = this.filters.excludePodcasts.filter(
-        filter => payment.podcast.indexOf(filter) !== -1
+        filter => payment.podcast?.toLowerCase().indexOf(filter.toLowerCase()) !== -1
       ).length
 
       if (exclude) {
@@ -139,19 +139,12 @@ function PaymentTracker(config) {
       }
     }
 
-    // podcast and eventGuid filter should both be considered
-    if (this.filters.podcasts && this.filters.eventGuids &&
-        (!payment.podcast || this.filters.podcasts.findIndex(p => p.toLowerCase() === payment.podcast.toLowerCase()) === -1) &&
-        (!payment.eventGuid || this.filters.eventGuids.indexOf(payment.eventGuid) === -1)) {
-        return
-    }
-    else if (this.filters.podcasts && payment.podcast &&
-      this.filters.podcasts.findIndex(p => p.toLowerCase() === payment.podcast.toLowerCase()) === -1
-    ) {
-      return
-    }
-    else if (this.filters.eventGuids && payment.eventGuid &&
-      this.filters.eventGuids.indexOf(payment.eventGuid) === -1
+    // podcast or eventGuid filter must match if either/both are set
+    if (
+      this.type == 'boost' &&
+      (this.filters.podcasts || this.filters.eventGuids) &&
+      (!this.filters.podcasts || this.filters.podcasts.findIndex(p => payment.podcast?.toLowerCase().indexOf(p.toLowerCase()) !== -1) === -1) &&
+      (!this.filters.eventGuids || this.filters.eventGuids.findIndex(e => payment.eventGuid === e) === -1)
     ) {
       return
     }
@@ -235,6 +228,7 @@ function NostrWatcher(relays) {
           picture: null,
           app_name: boost.app_name || 'Unknown',
           podcast: boost.podcast || 'Unknown',
+          event_guid: boost.eventGuid || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
           ...await addRemoteInfo(boost),
@@ -293,6 +287,7 @@ function NostrWatcher(relays) {
           picture: profile.picture || null,
           app_name: 'Nostr',
           podcast: 'Nostr',
+          event_guid: null,
           sats: Math.floor(value_msat_total / 1000),
           message: event.content,
         }, isOld)
@@ -427,6 +422,7 @@ function StoredBoosts(filters) {
           sender_name: boost.sender_name || 'Anonymous',
           app_name: boost.app_name || 'Unknown',
           podcast: boost.podcast || 'Unknown',
+          event_guid: boost.eventGuid || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
           ...await addRemoteInfo(boost),
