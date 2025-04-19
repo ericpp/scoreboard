@@ -379,15 +379,11 @@ function StoredBoosts(filters) {
       query.set("items", items)
 
       if (filters.podcasts) {
-        filters.podcasts.forEach(podcast => {
-          query.set("podcast", podcast)
-        })
+        query.set("podcast", filters.podcasts.join(","))
       }
 
       if (filters.eventGuids) {
-        filters.eventGuids.forEach(eventGuid => {
-          query.set("eventGuid", eventGuid)
-        })
+        query.set("eventGuid", filters.eventGuids.join(","))
       }
 
       if (filters.before) {
