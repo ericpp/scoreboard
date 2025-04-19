@@ -139,22 +139,24 @@ function PaymentTracker(config) {
       }
     }
 
-    // podcast or eventGuid filter must match if either/both are set
-    if (
-      this.type == 'boost' &&
-      (this.filters.podcasts || this.filters.eventGuids || this.filters.episodeGuids) &&
-      (!this.filters.podcasts || this.filters.podcasts.findIndex(p => payment.podcast?.toLowerCase().indexOf(p.toLowerCase()) !== -1) === -1) &&
-      (!this.filters.eventGuids || this.filters.eventGuids.findIndex(e => payment.eventGuid === e) === -1) &&
-      (!this.filters.episodeGuids || this.filters.episodeGuids.findIndex(e => payment.episodeGuid === e) === -1)
-    ) {
-      return
-    }
-
     if (this.filters.before && this.filters.before < payment.creation_date) {
       return
     }
 
     if (this.filters.after && this.filters.after > payment.creation_date) {
+      return
+    }
+
+    // podcast or eventGuid filter must match if either/both are set
+    const podcastMatch = (this.filters.podcasts && this.filters.podcasts.findIndex(p => payment.podcast?.toLowerCase().indexOf(p.toLowerCase()) !== -1) > -1)
+    const eventGuidMatch = (this.filters.eventGuids && this.filters.eventGuids.findIndex(e => payment.event_guid === e) > -1)
+    const episodeGuidMatch = (this.filters.episodeGuids && this.filters.episodeGuids.findIndex(e => payment.episode_guid === e) > -1)
+
+    if (
+      payment.type == 'boost' &&
+      (this.filters.podcasts || this.filters.eventGuids || this.filters.episodeGuids) &&
+      (!podcastMatch && !eventGuidMatch && !episodeGuidMatch)
+    ) {
       return
     }
 
@@ -230,7 +232,8 @@ function NostrWatcher(relays) {
           app_name: boost.app_name || 'Unknown',
           podcast: boost.podcast || 'Unknown',
           event_guid: boost.eventGuid || null,
-          episode_guid: boost.episodeGuid || null,
+          episode_guid: boost.episode_guid || null,
+          episode: boost.episode || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
           ...await addRemoteInfo(boost),
@@ -291,6 +294,7 @@ function NostrWatcher(relays) {
           podcast: 'Nostr',
           event_guid: null,
           episode_guid: null,
+          episode: null,
           sats: Math.floor(value_msat_total / 1000),
           message: event.content,
         }, isOld)
@@ -426,7 +430,8 @@ function StoredBoosts(filters) {
           app_name: boost.app_name || 'Unknown',
           podcast: boost.podcast || 'Unknown',
           event_guid: boost.eventGuid || null,
-          episode_guid: boost.episodeGuid || null,
+          episode_guid: boost.episode_guid || null,
+          episode: boost.episode || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
           ...await addRemoteInfo(boost),
