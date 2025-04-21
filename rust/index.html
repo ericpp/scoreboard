@@ -484,9 +484,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Bands at Bitcoin", "Day 3", "Day 2", "Day 1", "bitpunk"])
 
-    app.setFilter('podcasts', ["Autumn Rust"])
-    app.setFilter('episodeGuids', ["818384b7-e08b-4200-8845-97cfaa643186", "d92de178-a08b-4985-ab6b-9ca9164098b2", "2f1a8cca-cfe6-48e6-9e7e-4fde541d4977"])
-    app.setFilter('eventGuids', ["ac6d521b-f3b3-4397-b6d2-13d50daa244e", "7273eba9-d12d-41d0-8efa-ec777aab446a"])
+    if (params.get("after") == "2025-01-11") {
+      app.setFilter('podcasts', ["Polar Embrace"])
+      app.setFilter('episodeGuids', ["65137f9b-62d6-4247-a17b-dff53926a1a9", "01dabf27-45ab-43cc-b4b6-b2897ecf20e5"])
+      app.setFilter('eventGuids', ["6ec3cb1f-06c4-474b-8fc7-c2040d8c1968"])
+    }
+    else {
+      app.setFilter('podcasts', ["Autumn Rust"])
+      app.setFilter('episodeGuids', ["818384b7-e08b-4200-8845-97cfaa643186", "d92de178-a08b-4985-ab6b-9ca9164098b2", "2f1a8cca-cfe6-48e6-9e7e-4fde541d4977"])
+      app.setFilter('eventGuids', ["ac6d521b-f3b3-4397-b6d2-13d50daa244e", "7273eba9-d12d-41d0-8efa-ec777aab446a"])
+    }
 
     app.setListener((payment, old) => {
         latestBoost.add(payment, old)
