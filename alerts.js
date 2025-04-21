@@ -87,6 +87,8 @@ class AlertSlot {
   images = []
   selectedImage = null
 
+  triggers = []
+
   message = null
   messageShown = false
 
@@ -97,7 +99,8 @@ class AlertSlot {
     this.messageRoot = this.root.querySelector(".message")
 
     this.alert = getAlertObject(this.root.querySelector(".background"))
-    this.images = options.images || null
+    this.images = options.images || []
+    this.triggers = options.triggers || []
 
     this.message = options.message || {}
 
@@ -110,8 +113,19 @@ class AlertSlot {
     this.alert.onTimeUpdate(this.handleTimeUpdate.bind(this))
   }
 
-  pickImage() {
-    if (this.images) {
+  pickImage(sats) {
+    if (this.triggers.length) {
+      const strSats = new String(sats)
+      const img = this.triggers.find(trig => {
+        return (
+          (trig.endsWith && strSats.endsWith(trig.endsWith)) ||
+          (trig.includes && strSats.includes(trig.includes))
+        )
+      })
+
+      this.alert.setUrl(img?.src)
+    }
+    else if (this.images.length) {
       this.selectedImage = Math.floor(Math.random() * this.images.length)
       this.alert.setUrl(this.images[this.selectedImage])
     }
@@ -191,8 +205,8 @@ class AlertSlot {
     this.alert.play()
   }
 
-  showMessage(message, line2, picture) {
-    this.pickImage()
+  showMessage(message, line2, sats, picture) {
+    this.pickImage(sats)
     this.setMessage(message, line2, picture)
     this.handleTimeUpdate(0)
     this.play()
@@ -259,7 +273,7 @@ async function startAlerts(config) {
     if (url.test) {
       alertQueue.push({
         sender_name: "Anonymous PodcastGuru User",
-        sats: 3333,
+        sats: url.test,
         app_name: "Test App",
         type: "boost",
       })
@@ -314,14 +328,19 @@ async function startAlerts(config) {
   }
 
   const getRemoteInfo = (payment) => {
-      return (payment.remote_feed) ? `${payment.remote_feed} - ${payment.remote_item}` : ""
+    return (payment.remote_feed) ? `${payment.remote_feed} - ${payment.remote_item}` : ""
   }
 
   const defaultMessageRenderer = (slot, payment) => {
     const sats = payment.sats.toLocaleString()
     const userMessage = config.showMessages ? payment.message : getRemoteInfo(payment)
 
-    slot.showMessage(`${sats} sat ${payment.type} from ${payment.sender_name}`, userMessage, payment.picture)
+    slot.showMessage(`${sats} sat ${payment.type} from ${payment.sender_name}`, userMessage, payment.sats, payment.picture)
+  }
+
+  const render = (slot, payment) => {
+    const renderer = config.messageRender || defaultMessageRenderer
+    renderer(slot, payment)
   }
 
   const handleAlertQueue = () => {
@@ -339,9 +358,8 @@ async function startAlerts(config) {
     curSlot = newSlot
 
     const payment = alertQueue.shift()
-    const renderer = config.messageRender || defaultMessageRenderer
 
-    renderer(slot, payment)
+    render(slot, payment)
   }
 
 
