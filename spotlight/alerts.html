@@ -57,7 +57,9 @@ body {
           <source src="" type="video/webm">
         </video>
         <div class="message fade" data-timeshow="0" data-timehide="7.5">
-          <div class="messageText" style="flex: 1 1"></div>
+          <div class="messageText" style="flex: 1 1">
+            <span style="position: absolute; opacity: 0">a</span>
+          </div>
         </div>
       </div>
     </div>
@@ -96,7 +98,7 @@ body {
 
     const vara = new Vara(
       ".messageText",
-      "fonts/Satisfy/SatisfySL.json",
+      "https://cdn.jsdelivr.net/gh/akzhy/vara@master/fonts/Satisfy/SatisfySL.json",
       [{
         text: message,
         id: "draw",
