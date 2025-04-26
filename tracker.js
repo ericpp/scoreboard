@@ -1,48 +1,33 @@
+class PaymentTracker {
+  constructor(config = {}) {
+    this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol"]
+    this.nostrBoostPkey = config.nostrBoostPkey || null
+    this.nostrZapEvent = config.nostrZapEvent || null
+    this.loadBoosts = config.loadBoosts ?? true
+    this.loadZaps = config.loadZaps ?? true
+    this.filters = {}
+    this.identifiers = []
+    this.listener = null
+    this.storedBoosts = null
+    this.nostrWatcher = null
+    this.lastBoostAt = null
 
-function PaymentTracker(config) {
-  config = config || {}
-
-  this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol"]
-
-  this.nostrBoostPkey = config.nostrBoostPkey || null
-  this.nostrZapEvent = config.nostrZapEvent || null
-
-  this.loadBoosts = true
-
-  if (config.loadBoosts !== undefined) {
-    this.loadBoosts = config.loadBoosts
-  }
-
-  this.loadZaps = true
-
-  if (config.loadZaps !== undefined) {
-    this.loadZaps = config.loadZaps
-  }
-
-  this.filters = {}
-  this.identifiers = []
-  this.listener = null
-
-  this.storedBoosts = null
-  this.nostrWatcher = null
-  this.lastBoostAt = null
-
-  this.init = () => {
-    Object.entries(config || {}).forEach(([name, value]) => {
+    // Initialize filters from config
+    Object.entries(config).forEach(([name, value]) => {
       this.setFilter(name, value)
     })
 
     this.nostrWatcher = new NostrWatcher(this.relays)
   }
 
-  this.setFilter = (name, value) => {
+  setFilter(name, value) {
     value = this.parseFilterValue(name, value)
 
-    if (name == 'after') {
+    if (name === 'after') {
       this.lastBoostAt = value
     }
 
-    if (name == 'podcast') {
+    if (name === 'podcast') {
       name = 'podcasts'
       value = [value]
     }
@@ -50,57 +35,50 @@ function PaymentTracker(config) {
     this.filters[name] = value
   }
 
-  this.parseFilterValue = (name, value) => {
-    if ((name == 'before' || name == 'after') && typeof(value) != "number") {
+  parseFilterValue(name, value) {
+    if ((name === 'before' || name === 'after') && typeof value !== "number") {
       return Math.floor(new Date(value) / 1000)
     }
-
     return value
   }
 
-  this.setLoadBoosts = (shouldLoad) => {
+  setLoadBoosts(shouldLoad) {
     this.loadBoosts = shouldLoad
   }
 
-  this.setNostrBoostPkey = (pkey) => {
+  setNostrBoostPkey(pkey) {
     this.nostrBoostPkey = pkey
   }
 
-  this.setNostrZapEvent = (event) => {
+  setNostrZapEvent(event) {
     this.nostrZapEvent = event
   }
 
-  this.setListener = (listener) => {
+  setListener(listener) {
     this.listener = listener
   }
 
-  this.loadStoredBoosts = async () => {
+  async loadStoredBoosts() {
     this.storedBoosts = new StoredBoosts(this.filters)
+    await this.storedBoosts.load((item) => this.add(item))
+  }
 
-    await this.storedBoosts.load((item, old) => {
-      this.add(item, old)
+  subscribeBoosts() {
+    this.nostrWatcher.subscribeBoosts(this.nostrBoostPkey, (item) => {
+      if (this.lastBoostAt > item.creation_date) return
+      this.add(item)
     })
   }
 
-  this.subscribeBoosts = () => {
-    this.nostrWatcher.subscribeBoosts(this.nostrBoostPkey, (item, old) => {
-      if (this.lastBoostAt > item.creation_date) {
-        return
-      }
-
-      this.add(item, old)
+  subscribeZaps() {
+    this.nostrWatcher.subscribeZaps(this.nostrZapEvent, (item) => {
+      this.add(item)
     })
   }
 
-  this.subscribeZaps = () => {
-    this.nostrWatcher.subscribeZaps(this.nostrZapEvent, (item, old) => {
-      this.add(item, old)
-    })
-  }
-
-  this.start = async () => {
+  async start() {
     if (this.loadBoosts) {
-      this.loadStoredBoosts()
+      await this.loadStoredBoosts()
     }
 
     if (this.nostrBoostPkey) {
@@ -112,116 +90,89 @@ function PaymentTracker(config) {
     }
   }
 
-  this.add = (payment, old) => {
-    if (old && payment.type == 'boost' && !this.loadBoosts) {
-      return // skip olds if loadBoosts = false
-    }
+  add(payment) {
+    // Skip old items if loading is disabled for that type
+    if (payment.isOld && payment.type === 'boost' && !this.loadBoosts) return
+    if (payment.isOld && payment.type === 'zap' && !this.loadZaps) return
 
-    if (old && payment.type == 'zap' && !this.loadZaps) {
-      return // skip olds if loadZaps = false
-    }
+    // Skip invalid or duplicate payments
+    if (!payment.sats || isNaN(payment.sats)) return
+    if (this.identifiers.includes(payment.identifier)) return
 
-    if (!payment.sats || isNaN(payment.sats)) {
-      return // missing sat amount
-    }
-
-    if (this.identifiers.indexOf(payment.identifier) !== -1) {
-      return // already seen
-    }
-
-    if (this.filters.excludePodcasts) {
-      const exclude = this.filters.excludePodcasts.filter(
-        filter => payment.podcast?.toLowerCase().indexOf(filter.toLowerCase()) !== -1
-      ).length
-
-      if (exclude) {
-        return
-      }
-    }
-
-    if (this.filters.before && this.filters.before < payment.creation_date) {
+    // Apply filters
+    if (this.filters.excludePodcasts && 
+        this.filters.excludePodcasts.some(filter => 
+          payment.podcast?.toLowerCase().includes(filter.toLowerCase()))) {
       return
     }
 
-    if (this.filters.after && this.filters.after > payment.creation_date) {
-      return
-    }
+    if (this.filters.before && this.filters.before < payment.creation_date) return
+    if (this.filters.after && this.filters.after > payment.creation_date) return
 
-    // podcast or eventGuid filter must match if either/both are set
-    const podcastMatch = (this.filters.podcasts && this.filters.podcasts.findIndex(p => payment.podcast?.toLowerCase().indexOf(p?.toLowerCase()) !== -1) > -1)
-    const eventGuidMatch = (this.filters.eventGuids && this.filters.eventGuids.findIndex(e => payment.event_guid === e) > -1)
-    const episodeGuidMatch = (this.filters.episodeGuids && this.filters.episodeGuids.findIndex(e => payment.episode_guid === e) > -1)
+    // Check podcast, event, or episode match if filters are set
+    const podcastMatch = this.filters.podcasts?.some(p => 
+      payment.podcast?.toLowerCase().includes(p?.toLowerCase()))
+    const eventGuidMatch = this.filters.eventGuids?.some(e => 
+      payment.event_guid === e)
+    const episodeGuidMatch = this.filters.episodeGuids?.some(e => 
+      payment.episode_guid === e)
 
     if (
-      payment.type == 'boost' &&
+      payment.type === 'boost' &&
       (this.filters.podcasts || this.filters.eventGuids || this.filters.episodeGuids) &&
       (!podcastMatch && !eventGuidMatch && !episodeGuidMatch)
     ) {
       return
     }
 
-    this.listener(payment, old)
-
+    // Process valid payment
+    this.listener(payment, payment.isOld)
     this.identifiers.push(payment.identifier)
   }
-
-  this.init()
 }
 
-function NostrWatcher(relays) {
-  this.nostrPool = new NostrTools.SimplePool()
+class NostrWatcher {
+  constructor(relays) {
+    this.nostrPool = new NostrTools.SimplePool()
+    this.nostrProfileQueue = {}
+    this.nostrProfiles = {}
+    this.nostrRelays = relays
 
-  this.nostrProfileQueue = {}
-  this.nostrProfiles = {}
-
-  this.nostrRelays = relays
-
-  this.parsePubkey = (pubkey) => {
-    if (pubkey.indexOf('npub') === -1) {
-      return pubkey
-    }
-
-    const parse = NostrTools.nip19.decode(pubkey)
-    return parse.data
+    // Set up profile resolution interval
+    this.setupProfileResolution()
   }
 
-  this.parseActivity = (addr) => {
-    if (addr.indexOf('naddr') === -1) {
-      return addr
-    }
-
-    const parse = NostrTools.nip19.decode(addr)
-    return [parse.data.kind, parse.data.pubkey, parse.data.identifier].join(':')
+  parsePubkey(pubkey) {
+    if (!pubkey.includes('npub')) return pubkey
+    const { data } = NostrTools.nip19.decode(pubkey)
+    return data
   }
 
-  this.subscribeBoosts = (nostrPubkey, callback) => {
+  parseActivity(addr) {
+    if (!addr.includes('naddr')) return addr
+    const { data } = NostrTools.nip19.decode(addr)
+    return [data.kind, data.pubkey, data.identifier].join(':')
+  }
+
+  subscribeBoosts(nostrPubkey, callback) {
     let isOld = true
     let isOldTimeout = null
-    let self = this
+    const parsedPubkey = this.parsePubkey(nostrPubkey)
 
-    nostrPubkey = this.parsePubkey(nostrPubkey)
-
-    this.nostrPool.subscribeMany(this.nostrRelays, [{authors: [nostrPubkey]}], {
+    this.nostrPool.subscribeMany(this.nostrRelays, [{authors: [parsedPubkey]}], {
       async onevent(event) {
-        invoice = JSON.parse(event.content)
+        const invoice = JSON.parse(event.content)
 
-        if (isOldTimeout) {
-          clearTimeout(isOldTimeout)
-        }
-
+        // Manage isOld state
+        if (isOldTimeout) clearTimeout(isOldTimeout)
         if (isOld) {
-          // turn off isOld after 5 seconds of inactivity
-          isOldTimeout = setTimeout(() => {
-            isOld = false
-          }, 5000)
+          isOldTimeout = setTimeout(() => { isOld = false }, 5000)
         }
 
-        if (!invoice.boostagram) {
-          return
-        }
+        if (!invoice.boostagram) return
 
         const boost = invoice.boostagram
-
+        
         callback({
           type: 'boost',
           action: boost.action || 'unknown',
@@ -236,36 +187,31 @@ function NostrWatcher(relays) {
           episode: boost.episode || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
+          isOld: isOld,
           ...await addRemoteInfo(boost),
         }, isOld)
       },
       oneose() {
-        // h.close()
+        // Subscription completed
       }
     })
   }
 
-  this.subscribeZaps = (nostrActivity, callback) => {
+  subscribeZaps(nostrActivity, callback) {
     let isOld = true
     let isOldTimeout = null
-    let self = this
+    const self = this
+    const parsedActivity = this.parseActivity(nostrActivity)
 
-    nostrActivity = this.parseActivity(nostrActivity)
-
-    this.nostrPool.subscribeMany(this.nostrRelays, [{'#a': [nostrActivity], 'kinds': [9735]}], {
+    this.nostrPool.subscribeMany(this.nostrRelays, [{'#a': [parsedActivity], 'kinds': [9735]}], {
       async onevent(event) {
-        if (isOldTimeout) {
-          clearTimeout(isOldTimeout)
-        }
-
+        // Manage isOld state
+        if (isOldTimeout) clearTimeout(isOldTimeout)
         if (isOld) {
-          // turn off isOld after 5 seconds of inactivity
-          isOldTimeout = setTimeout(() => {
-            isOld = false
-          }, 5000)
+          isOldTimeout = setTimeout(() => { isOld = false }, 5000)
         }
 
-        // convert tags array into an object
+        // Convert tags array into an object
         const tags = event.tags.reduce((result, tag) => {
           const [name, value] = tag
           if (!result[name]) result[name] = []
@@ -273,16 +219,11 @@ function NostrWatcher(relays) {
           return result
         }, {})
 
-        // original zap request is encoded as a tag in the zap receipt
-        const zaprequest = JSON.parse(tags.description[0])
-
-        // msats can be calculated from bolt11 request
+        // Process zap data
+        const zapRequest = JSON.parse(tags.description[0])
         const value_msat_total = self.getMsatsFromBolt11(tags.bolt11[0])
+        const profile = await self.getNostrProfile(zapRequest.pubkey)
 
-        // batch look up names based on original zap request pubkey
-        const profile = await self.getNostrProfile(zaprequest.pubkey)
-
-        // send back to subscriber
         callback({
           type: 'zap',
           action: 'zap',
@@ -297,30 +238,29 @@ function NostrWatcher(relays) {
           episode: null,
           sats: Math.floor(value_msat_total / 1000),
           message: event.content,
+          isOld: isOld,
         }, isOld)
       },
       oneose() {
-        // h.close()
+        // Subscription completed
       }
     })
   }
 
-  this.getNostrProfile = (pubkey) => {
-    return new Promise((resolve, reject) => {
+  getNostrProfile(pubkey) {
+    return new Promise(resolve => {
       if (this.nostrProfiles[pubkey]) {
         resolve(this.nostrProfiles[pubkey])
-      }
-      else {
+      } else {
         if (!this.nostrProfileQueue[pubkey]) {
           this.nostrProfileQueue[pubkey] = []
         }
-
         this.nostrProfileQueue[pubkey].push(resolve)
       }
     })
   }
 
-  this.getMsatsFromBolt11 = (bolt11) => {
+  getMsatsFromBolt11(bolt11) {
     const multipliers = {
       m: 100000000,
       u: 100000,
@@ -328,99 +268,99 @@ function NostrWatcher(relays) {
       p: 0.1,
     }
 
-    // msat amount encoded in the first part (e.g. lnbc100n -> 100n -> 100 * 100 = 100,000)
-    let matches = bolt11.match(/^ln\w+?(\d+)([a-zA-Z]?)/)
-
-    if (!matches) {
-      return null // no match
-    }
-
-    // calculate the msats from the number and multiplier
-    return parseInt(matches[1]) * multipliers[matches[2]]
+    // Parse amount from bolt11 string (e.g. lnbc100n -> 100n -> 100 * 100 = 10,000)
+    const matches = bolt11.match(/^ln\w+?(\d+)([a-zA-Z]?)/)
+    
+    if (!matches) return null
+    
+    return parseInt(matches[1]) * (multipliers[matches[2]] || 1)
   }
 
-  // resolve queued nostr pubkeys to names
-  setInterval(async () => {
-    if (!this.nostrProfileQueue) return
+  setupProfileResolution() {
+    setInterval(async () => {
+      if (!this.nostrProfileQueue) return
 
-    let pubkeys = Object.keys(this.nostrProfileQueue)
-    if (pubkeys.length === 0) return
+      const pubkeys = Object.keys(this.nostrProfileQueue)
+      if (pubkeys.length === 0) return
 
-    let profiles = await this.nostrPool.querySync(this.nostrRelays, {authors: pubkeys, kinds: [0]})
+      const profiles = await this.nostrPool.querySync(
+        this.nostrRelays, 
+        {authors: pubkeys, kinds: [0]}
+      )
 
-    profiles.forEach(event => {
-      const profile = JSON.parse(event.content)
-      this.nostrProfiles[event.pubkey] = profile
-    })
+      // Update profiles cache
+      profiles.forEach(event => {
+        this.nostrProfiles[event.pubkey] = JSON.parse(event.content)
+      })
 
-    for (let pubkey of pubkeys) {
-      let resolvers = this.nostrProfileQueue[pubkey]
-
-      if (resolvers) {
-        delete this.nostrProfileQueue[pubkey]
-
-        resolvers.forEach(resolve => {
-          resolve(this.nostrProfiles[pubkey] || {})
-        })
+      // Resolve pending promises
+      for (const pubkey of pubkeys) {
+        const resolvers = this.nostrProfileQueue[pubkey]
+        if (resolvers) {
+          delete this.nostrProfileQueue[pubkey]
+          resolvers.forEach(resolve => {
+            resolve(this.nostrProfiles[pubkey] || {})
+          })
+        }
       }
-    }
-  }, 1000)
+    }, 1000)
+  }
 }
 
-function StoredBoosts(filters) {
+class StoredBoosts {
+  constructor(filters = {}) {
+    this.filters = filters
+  }
 
-  this.filters = filters || {}
-
-  this.load = async (callback) => {
+  async load(callback) {
     let page = 1
-    let items = 1000
-    let lastBoostAt = null
-
-    if (filters.after) {
-      lastBoostAt = filters.after
-    }
+    const items = 1000
+    let lastBoostAt = this.filters.after || null
 
     while (true) {
       const query = new URLSearchParams()
       query.set("page", page)
       query.set("items", items)
 
-      if (filters.podcasts) {
-        query.set("podcast", filters.podcasts.join(","))
+      // Apply filters to query
+      if (this.filters.podcasts) {
+        query.set("podcast", this.filters.podcasts.join(","))
+      }
+      
+      if (this.filters.eventGuids) {
+        query.set("eventGuid", this.filters.eventGuids.join(","))
+      }
+      
+      if (this.filters.episodeGuids) {
+        query.set("episodeGuid", this.filters.episodeGuids.join(","))
+      }
+      
+      if (this.filters.before) {
+        query.set("created_at_lt", this.filters.before)
+      }
+      
+      if (this.filters.after) {
+        query.set("created_at_gt", this.filters.after)
       }
 
-      if (filters.eventGuids) {
-        query.set("eventGuid", filters.eventGuids.join(","))
-      }
-
-      if (filters.episodeGuids) {
-        query.set("episodeGuid", filters.episodeGuids.join(","))
-      }
-
-      if (filters.before) {
-        query.set("created_at_lt", filters.before)
-      }
-
-      if (filters.after) {
-        query.set("created_at_gt", filters.after)
-      }
-
+      // Fetch boosts
       const result = await fetch(`https://boostboard.vercel.app/api/boosts?${query}`)
       const boosts = await result.json()
 
-      if (!boosts || boosts.length === 0) {
-        break
-      }
+      if (!boosts || boosts.length === 0) break
 
-      lastBoostAt = Math.max(lastBoostAt, Math.max(...boosts.map(x => x.creation_date)))
+      // Update last boost time
+      lastBoostAt = Math.max(
+        lastBoostAt || 0, 
+        Math.max(...boosts.map(x => x.creation_date))
+      )
 
-      boosts.forEach(async invoice => {
-        if (!invoice.boostagram) {
-          return
-        }
+      // Process boosts
+      for (const invoice of boosts) {
+        if (!invoice.boostagram) continue
 
         const boost = invoice.boostagram
-
+        
         callback({
           type: 'boost',
           action: boost.action || 'unknown',
@@ -434,9 +374,10 @@ function StoredBoosts(filters) {
           episode: boost.episode || null,
           sats: Math.floor(boost.value_msat_total / 1000),
           message: boost.message,
+          isOld: true,
           ...await addRemoteInfo(boost),
         }, true)
-      })
+      }
 
       page++
     }
@@ -445,6 +386,64 @@ function StoredBoosts(filters) {
   }
 }
 
+class RemoteItemInfo {
+  constructor() {
+    this.resolved = {}
+    this.queue = {}
+    
+    this.setupItemResolution()
+  }
+
+  async fetch(podcastguid, episodeguid) {
+    const url = `https://api.podcastindex.org/api/1.0/value/byepisodeguid?podcastguid=${podcastguid}&episodeguid=${episodeguid}`
+    const result = await fetch(url)
+    const json = await result.json()
+
+    if (json.status === 'false') return {}
+
+    return {
+      remote_feed: json.value.feedTitle,
+      remote_item: json.value.title,
+    }
+  }
+
+  resolve(podcastguid, episodeguid) {
+    return new Promise(resolve => {
+      const key = `${podcastguid}|${episodeguid}`
+
+      if (!this.queue[key]) {
+        this.queue[key] = {
+          podcastguid,
+          episodeguid,
+          resolvers: [],
+        }
+      }
+
+      this.queue[key].resolvers.push(resolve)
+    })
+  }
+
+  setupItemResolution() {
+    setInterval(async () => {
+      for (const item of Object.values(this.queue)) {
+        const key = `${item.podcastguid}|${item.episodeguid}`
+
+        if (this.resolved[key] === undefined) {
+          this.resolved[key] = await this.fetch(item.podcastguid, item.episodeguid)
+        }
+
+        const resolvers = [...item.resolvers]
+        item.resolvers = []
+        
+        for (const resolver of resolvers) {
+          resolver(this.resolved[key])
+        }
+      }
+    }, 100)
+  }
+}
+
+// Singleton for remote info
 let remoteInfo = null
 
 async function addRemoteInfo(boost) {
@@ -459,60 +458,8 @@ async function addRemoteInfo(boost) {
   return await remoteInfo.resolve(boost.remote_feed_guid, boost.remote_item_guid)
 }
 
-function RemoteItemInfo() {
-  this.resolved = {}
-  this.queue = {}
-
-  this.fetch = async (podcastguid, episodeguid) => {
-    const result = await fetch(`https://api.podcastindex.org/api/1.0/value/byepisodeguid?podcastguid=${podcastguid}&episodeguid=${episodeguid}`)
-    const json = await result.json()
-
-    if (json.status == 'false') {
-      return {}
-    }
-
-    return {
-      "remote_feed": json.value.feedTitle,
-      "remote_item": json.value.title,
-    }
-  }
-
-  this.resolve = (podcastguid, episodeguid) => {
-    return new Promise(resolve => {
-      const key = podcastguid + "|" + episodeguid
-
-      if (!this.queue[key]) {
-        this.queue[key] = {
-          "podcastguid": podcastguid,
-          "episodeguid": episodeguid,
-          "resolvers": [],
-        }
-      }
-
-      this.queue[key].resolvers.push(resolve)
-    })
-  }
-
-  setInterval(async () => {
-    Object.values(this.queue).forEach(async item => {
-      const key = item.podcastguid + "|" + item.episodeguid
-
-      if (this.resolved[key] === undefined) {
-        this.resolved[key] = await this.fetch(item.podcastguid, item.episodeguid)
-      }
-
-      item.resolvers.forEach((resolver, index) => {
-        delete item.resolvers[index]
-        resolver(this.resolved[key])
-      })
-    })
-  }, 100)
-}
-
-
-const getUrlConfig = (url) => {
-  const params = (new URL(url)).searchParams.entries()
-
+function getUrlConfig(url) {
+  const params = new URL(url).searchParams.entries()
   return [...params].reduce((result, [key, val]) => {
     result[key] = val
     return result

@@ -12,10 +12,10 @@
 
 <style>
 @font-face {
-    font-family: 'Aquiline Two'; /* Name of the font */
-    src: url('AquilineTwo.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
+  font-family: 'Aquiline Two'; /* Name of the font */
+  src: url('AquilineTwo.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
 }
 
 body {
@@ -51,12 +51,12 @@ body {
 
 <div style="display: flex; justify-content: center; align-items: center; height: 100%">
   <div class="box" style="margin: auto; margin-top: auto; border: 1px solid #222;">
-    <div id="alert" class="alert fade" style="position: absolute;">
+    <div id="alert" class="alert" style="position: absolute;">
       <div class="messageFlex">
         <video class="background" muted playsinline style="width: 1920px;">
           <source src="" type="video/webm">
         </video>
-        <div class="message fade" data-timeshow="0" data-timehide="7.5">
+        <div class="message fadeOut" data-timeshow="1.7" data-timehide="7.5">
           <div class="messageText" style="flex: 1 1">
             <span style="position: absolute; opacity: 0">a</span>
           </div>
@@ -68,17 +68,11 @@ body {
 
 <script>
 (async () => {
-  const SATOSHI = `
-  <svg fill="white" xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; vertical-align: middle;" viewBox="6.5 2.5 11 19">
-    <path d="M7 7.90906H17" stroke="currentColor"/>
-    <path d="M12 5.45454V3" stroke="currentColor"/>
-    <path d="M12 20.9999V18.5454" stroke="currentColor"/>
-    <path d="M7 12H17" stroke="currentColor"/>
-    <path d="M7 16.0909H17" stroke="currentColor"/>
-  </svg>`
-
   const triggers = [
-    { "includes": "420", "src": "420nocard.webm" },
+    { "threshold": 1000000, "src": "https://r2.ericpp.dev/spotlight/1mil.webm" },
+    { "threshold": 500000, "src": "https://r2.ericpp.dev/spotlight/500k.webm" },
+    { "threshold": 100000, "src": "https://r2.ericpp.dev/spotlight/100k.webm" },
+    { "contains": "420", "src": "https://r2.ericpp.dev/spotlight/420nocard.webm" },
     { "endsWith": "0", "src": "https://r2.ericpp.dev/spotlight/0.webm" },
     { "endsWith": "1", "src": "https://r2.ericpp.dev/spotlight/1nocard.webm" },
     { "endsWith": "2", "src": "https://r2.ericpp.dev/spotlight/2.webm" },
@@ -91,41 +85,40 @@ body {
     { "endsWith": "9", "src": "https://r2.ericpp.dev/spotlight/9.webm" },
   ]
 
-  const messageRender = (slot, payment) => {
-    const message = `${escapeHtml(payment.sats.toLocaleString())} sats from ${escapeHtml(payment.sender_name)}`
+  const events = {
+    messageRender: (payment) => [],
 
-    document.querySelector(".messageText").innerHTML = '<span style="position: absolute; opacity: 0">a</span>';
+    messageShow: (payment) => {
+      document.querySelector(".messageText").innerHTML = '<span style="position: absolute; opacity: 0">a</span>';
 
-    const vara = new Vara(
-      ".messageText",
-      "https://cdn.jsdelivr.net/gh/akzhy/vara@master/fonts/Satisfy/SatisfySL.json",
-      [{
-        text: message,
-        id: "draw",
-        delay: 2000,
-        textAlign: "center",
-        fontSize: 48,
-        strokeWidth: 2,
-      }],
-      {
-        fontSize: 48,
-        strokeWidth: 2,
-      }
-    )
-
-    slot.pickImage(payment.sats)
-    // slot.setMessage(message)
-    slot.handleTimeUpdate(0)
-    slot.play()
+      new Vara(
+        ".messageText",
+        "https://cdn.jsdelivr.net/gh/akzhy/vara@master/fonts/Satisfy/SatisfySL.json",
+        [{
+          text: `${escapeHtml(payment.sats.toLocaleString())} sats from ${escapeHtml(payment.sender_name)}`,
+          id: "draw",
+          delay: 0,
+          textAlign: "center",
+          fontSize: 48,
+          strokeWidth: 2,
+        }],
+        {
+          fontSize: 48,
+          strokeWidth: 2,
+        }
+      )
+    }
   }
 
   startAlerts({
     after: "2024-04-20 00:00:00",
+    loadZaps: true,
+    loadBoosts: true,
     slots: [{
       id: "#alert",
       triggers,
+      events,
     }],
-    messageRender,
   })
 })()
 </script>
