@@ -110,15 +110,22 @@ body {
     }
   }
 
-  startAlerts({
+  const filters = {
+    podcasts: ["Satellite Spotlight"],
+    // episodeGuids: ["65137f9b-62d6-4247-a17b-dff53926a1a9", "01dabf27-45ab-43cc-b4b6-b2897ecf20e5"],
+    eventGuids: ["1e34e11b-f536-4280-b068-7dd1a9399b12"],
     after: "2024-04-20 00:00:00",
-    loadZaps: true,
-    loadBoosts: true,
+  }
+
+  startAlerts({
     slots: [{
       id: "#alert",
       triggers,
       events,
     }],
+    loadZaps: true,
+    loadBoosts: true,
+    ...filters,
   })
 })()
 </script>
