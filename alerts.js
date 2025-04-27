@@ -212,6 +212,13 @@ class AlertSlot {
     )
     this.handleTimeUpdate(0)
     this.play()
+
+    console.log(
+      payment.sats,
+      payment.satTotal,
+      payment.lastSatTotal,
+      payment.sender_name,
+    )
   }
 }
 
