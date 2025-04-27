@@ -58,6 +58,21 @@ body {
 
 <script>
 (async () => {
+  const SATOSHI = `
+  <svg fill="white" xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; vertical-align: middle;" viewBox="6.5 2.5 11 19">
+    <path d="M7 7.90906H17" stroke="currentColor"/>
+    <path d="M12 5.45454V3" stroke="currentColor"/>
+    <path d="M12 20.9999V18.5454" stroke="currentColor"/>
+    <path d="M7 12H17" stroke="currentColor"/>
+    <path d="M7 16.0909H17" stroke="currentColor"/>
+  </svg>`
+
+  const messageRender = (payment) => {
+    const sats = payment.sats.toLocaleString()
+    const sender_name = payment.sender_name
+    return [`${escapeHtml(sats)} ${SATOSHI} ${escapeHtml(payment.sender_name)}`]
+  }
+
   const slots = [{
     id: "#alert1",
     images: [
@@ -67,6 +82,9 @@ body {
     ],
     message: {
       offsetY: [0, -3, 0]
+    },
+    events: {
+      messageRender,
     }
   },
   {
@@ -78,24 +96,11 @@ body {
     ],
     message: {
       offsetY: [-2, 0, 0]
+    },
+    events: {
+      messageRender,
     }
   }]
-
-  const SATOSHI = `
-  <svg fill="white" xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; vertical-align: middle;" viewBox="6.5 2.5 11 19">
-    <path d="M7 7.90906H17" stroke="currentColor"/>
-    <path d="M12 5.45454V3" stroke="currentColor"/>
-    <path d="M12 20.9999V18.5454" stroke="currentColor"/>
-    <path d="M7 12H17" stroke="currentColor"/>
-    <path d="M7 16.0909H17" stroke="currentColor"/>
-  </svg>`
-
-  const messageRender = (slot, payment) => {
-    const sats = payment.sats.toLocaleString()
-    const sender_name = payment.sender_name
-
-    slot.showMessage(`${escapeHtml(sats)} ${SATOSHI} ${escapeHtml(payment.sender_name)}`)
-  }
 
   startAlerts({
     after: "2024-12-25 00:00:00",
