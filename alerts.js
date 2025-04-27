@@ -212,13 +212,6 @@ class AlertSlot {
     )
     this.handleTimeUpdate(0)
     this.play()
-
-    console.log(
-      payment.sats,
-      payment.satTotal,
-      payment.lastSatTotal,
-      payment.sender_name,
-    )
   }
 }
 
@@ -261,6 +254,13 @@ async function startAlerts(config = {}) {
 
     payment.satTotal = satTotal
     payment.lastSatTotal = lastSatTotal
+
+    console.log(
+      payment.satTotal,
+      payment.lastSatTotal,
+      payment.sats,
+      payment.isOld,
+    )
 
     lastSatTotal = payment.satTotal
 
