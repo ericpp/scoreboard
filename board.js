@@ -1,10 +1,11 @@
 class SatCounter {
-  constructor(renderer) {
+  constructor(renderer, countUp = true) {
     this.total = 0
     this.drawTotal = 0
     this.increment = 0
     this.interval = null
     this.renderer = renderer
+    this.countUp = countUp
   }
 
   randomInt(min, max) {
@@ -33,7 +34,10 @@ class SatCounter {
   render() {
     const diff = this.total - this.drawTotal
 
-    if (diff > 0) {
+    if (!this.countUp) {
+      this.drawTotal = this.total
+    }
+    else if (diff > 0) {
       this.drawTotal += Math.min(diff, this.randomInt(50, this.increment))
     }
 
@@ -113,7 +117,7 @@ class Scores {
     }
   }
 
-  add(payment) {
+  add(payment, old) {
     const name = payment[this.metric].toUpperCase()
 
     if (!this.scores[name]) {
@@ -122,7 +126,7 @@ class Scores {
 
     this.scores[name].sats += payment.sats
     this.updateTopScores()
-    this.render()
+    this.render(old)
   }
 
   updateTopScores() {
@@ -145,7 +149,7 @@ class Scores {
     return div.innerHTML
   }
 
-  render() {
-    this.topScores.forEach(score => this.renderer(score))
+  render(old) {
+    this.topScores.forEach(score => this.renderer(score, old))
   }
 }

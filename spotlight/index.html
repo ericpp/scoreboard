@@ -1,0 +1,508 @@
+<html>
+<head>
+<title>Spotlight board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../board.js"></script>
+<script src="vara.js"></script>
+
+<style>
+  @font-face {
+    font-family: 'Satisfy';
+    src: url('Satisfy-Regular.ttf') format('truetype');
+  }
+
+  body {
+    background-color: #2a2a2a;
+    color: #333;
+    font-family: 'Satisfy', cursive;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 1.5rem;
+    color: #f3e9d2;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  }
+
+  .board-table {
+    position: relative;
+    border-spacing: 0;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .board-table tr {
+    height: 44px;
+  }
+
+  .board-table td {
+    border-right: 4px solid black;
+    border-bottom: 4px solid black;
+    vertical-align: bottom;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .board-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .board-table td:nth-child(1) {
+    width: 42px;
+    text-align: center;
+  }
+
+  .board-table td:nth-child(2) {
+    width: 37px;
+  }
+
+  .board-table td:nth-child(3) {
+    width: auto;
+  }
+
+  .board-table td:nth-child(4) {
+    width: 140px;
+    text-align: right;
+  }
+
+  .board {
+    background-image: url('nolines.png');
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    margin: 1rem auto;
+    padding: 0;
+    max-width: 800px;
+    position: relative;
+    overflow: hidden;
+    min-height: 400px;
+    height: 100%;
+    padding-top: 190px;
+  }
+
+  .board-content {
+    padding: 50px 70px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+
+  .board-rows {
+    position: relative;
+    top: 392px;
+    border-spacing: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .row {
+    height: 43px;
+    width: 660px;
+    display: flex;
+    flex-direction: row;
+  }
+
+  .row > div {
+    border-bottom: 4px solid blue;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    border-right: 4px solid red;
+  }
+
+  .position {
+    flex: 0 0 40px;
+    font-weight: bold;
+    color: #111;
+    font-family: 'Satisfy', cursive;
+    border-right: 4px solid red;
+  }
+
+  .name-container {
+    flex: 1;
+    height: 30px;
+    margin: 0 10px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    border-right: 4px solid red;
+  }
+
+  .sats-container {
+    flex: 0 0 120px;
+    text-align: right;
+    font-weight: bold;
+    color: #5a3921;
+    font-family: 'Satisfy', cursive;
+    border-right: 4px solid red;
+  }
+
+  #totalValue {
+    font-size: 2rem;
+    text-align: center;
+    padding: 15px;
+    font-weight: bold;
+    color: #5a3921;
+    font-family: 'Satisfy', cursive;
+  }
+
+  #latestMessage {
+    padding: 15px;
+    min-height: 30px;
+    color: #111;
+    font-style: italic;
+    font-family: 'Satisfy', cursive;
+    margin-bottom: 10px;
+  }
+
+  .section-title {
+    text-align: center;
+    color: #5a3921;
+    font-weight: bold;
+    margin-bottom: 25px;
+    font-family: 'Satisfy', cursive;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* Make vara elements fit the lines */
+  .vara-container svg {
+    display: block !important;
+    visibility: visible !important;
+    height: 30px !important;
+    overflow: visible;
+    max-width: 100%;
+  }
+
+  /* Style for top boards */
+  .top-board {
+    margin-top: 40px;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    body {
+      padding: 10px;
+      font-size: 1rem;
+    }
+    
+    .board {
+      padding-top: 130px;
+      margin: 0.5rem auto;
+    }
+    
+    .board-content {
+      padding: 15px;
+      padding-top: 40px;
+    }
+    
+    .board-table tr {
+      height: 40px;
+    }
+    
+    .board-table td:nth-child(1) {
+      width: 30px;
+    }
+    
+    .board-table td:nth-child(2) {
+      width: 20px;
+      display: none;
+    }
+    
+    .board-table td:nth-child(4) {
+      width: 90px;
+    }
+    
+    .section-title {
+      font-size: 1rem;
+      margin-bottom: 15px;
+    }
+    
+    #totalValue {
+      font-size: 1.7rem;
+    }
+  }
+
+  @media (min-width: 481px) and (max-width: 767px) {
+    body {
+      padding: 15px;
+    }
+    
+    .board {
+      padding-top: 150px;
+    }
+    
+    .board-content {
+      padding: 25px;
+    }
+    
+    .board-table td:nth-child(1) {
+      width: 35px;
+    }
+    
+    .board-table td:nth-child(2) {
+      width: 25px;
+    }
+    
+    .board-table td:nth-child(4) {
+      width: 120px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    body {
+      font-size: 1.2rem;
+      padding: 40px;
+    }
+    
+    .board {
+      min-height: 500px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    body {
+      font-size: 1.4rem;
+    }
+    
+    .board {
+      min-height: 600px;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="board">
+
+  <div class="totalSats">
+    <div>
+      <div class="section-title">TOTAL SATS RECEIVED</div>
+      <div id="totalValue">0</div>
+    </div>
+  </div>
+<!-- 
+  <div class="latestBoost">
+    <div>
+      <div class="section-title">LATEST MESSAGE</div>
+      <div id="latestMessage">Waiting for boosts...</div>
+    </div>
+  </div> -->
+
+  <div class="topBoosts">
+    <div id="boostsBoard" class="board-content">
+      <table class="board-table">
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="topApps">
+    <div id="appsBoard" class="board-content">
+      <table class="board-table">
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const scoreSlots = 10; // Increased to match lines in paper
+  const appSlots = 5;
+
+  function drawVara(id, interval) {
+    this.queue = [];
+    this.prevItem = {
+      position: "",
+      name: "",
+      sats: "",
+    }
+
+    // Get appropriate font size based on screen width
+    const fontSize = (() => {
+      if (window.innerWidth <= 320) return 18;
+      if (window.innerWidth <= 480) return 20;
+      if (window.innerWidth <= 768) return 22;
+      return 24;
+    })();
+
+    const strokeWidth = 2;
+
+    this.varaPosition = new drawStuff(`#${id} .position`)
+    this.varaName = new drawStuff(`#${id} .name`)
+    this.varaSats = new drawStuff(`#${id} .sats`)
+
+    this.push = (item, old) => {
+      this.queue.push({item, old});
+    }
+
+    setInterval(() => {
+      if (this.queue.length == 0) {
+        return
+      }
+
+      const {item, old} = this.queue.pop();
+      this.queue = [];
+
+      const curduration = !old ? interval : 0;
+
+      const name = (item.name.length > 12)
+          ? item.name.slice(0, 12) + '...'
+          : item.name;
+
+      this.varaPosition.setText(item.position)
+      this.varaName.setText(name)
+      this.varaSats.setText(item.sats)
+    }, 100)
+  }
+
+  function drawStuff(id, props = {}) {
+    this.lastText = "";
+    this.drawMode = false;
+
+    this.el = document.querySelector(id)
+    this.el.innerHTML = '<div class="vara"></div><div class="text" style="font-weight: bold;"></div>';
+
+    this.elText = this.el.querySelector('.text')
+    this.elVara = this.el.querySelector('.vara')
+
+    this.textStyle = window.getComputedStyle(this.elText)
+    this.fontSize = parseInt(this.textStyle.fontSize) + 4
+
+    this.vara = new Vara(
+      `${id} .vara`,
+      "https://cdn.jsdelivr.net/gh/akzhy/vara@master/fonts/Satisfy/SatisfySL.json",
+      [{
+        text: "",
+        delay: 0,
+        duration: 0,
+        textAlign: this.textStyle.textAlign,
+        color: this.textStyle.color,
+        fontSize: this.fontSize,
+        strokeWidth: 3,
+        ...props,
+      }]
+    );
+
+    this.setText = (text) => {
+      if (this.lastText == text) {
+        return
+      }
+
+      this.lastText = text;
+
+      if (!this.drawMode) {
+        this.elText.innerText = text
+        this.elText.style.display = ""
+        this.elVara.style.display = "none"
+      }
+      else {
+        this.elText.style.display = "none"
+        this.elVara.style.display = ""
+
+        this.vara.reset([{
+          text: String(text),
+          delay: 0,
+          textAlign: this.textStyle.textAlign,
+          color: this.textStyle.color,
+          fontSize: this.fontSize,
+          strokeWidth: 3,
+          ...props,
+        }])
+      }
+    }
+
+    setInterval(() => {
+      this.drawMode = true;
+    }, 5000);
+  }
+
+  function createBoard(id, field, numSlots) {
+    const table = document.querySelector(`#${id} .board-table tbody`);
+
+    // Create rows for top boosters
+    for (let i = 1; i <= numSlots; i++) {
+      const row = document.createElement('tr');
+      row.id = `${id}-${i}`;
+      row.innerHTML = `
+          <td class="position"></td>
+          <td>&nbsp;</td>
+          <td class="name"></td>
+          <td class="sats"></td>
+      `;
+      table.appendChild(row);
+    }
+    
+    let instances = [];
+
+    for (let i = 1; i <= numSlots; i++) {
+      instances[i] = new drawVara(`${id}-${i}`, 500)
+    }
+
+    return new Scores(field, numSlots, (score, old) => {
+      const sats = score.sats ? score.sats.toLocaleString() : "0";
+      const name = score.name || "";
+
+      instances[score.position].push({
+        position: score.position,
+        name: name,
+        sats: sats,
+      }, old)
+    });
+  }
+
+  function addBoost(payment, old) {
+      topBoosters.add(payment, old);
+      topApps.add(payment, old);
+      // latestBoost.add(payment, old);
+      totalSats.add(payment, old);
+  }
+
+  const topBoosters = createBoard('boostsBoard', 'sender_name', scoreSlots);
+  const topApps = createBoard('appsBoard', 'app_name', appSlots);
+
+  let totalVara = new drawStuff('#totalValue')
+  let totalSats = new SatCounter((total) => {
+    totalVara.setText(total)
+  }, false)
+
+  // let latestBoost = new LatestPayment('.latestBoost')
+
+  // Initialize tracker
+  let app = new PaymentTracker();
+
+  app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce");
+  app.setNostrZapEvent("30311:3a02709eb796e5728b326fc800610a5425a34403ebc0a9a2acd60c641690eb0e:1727043230");
+
+  let params = (new URL(document.location)).searchParams;
+
+  app.setFilter('after', params.get("after") || "2025-01-11 00:00:00 -0500");
+  app.setFilter('before', params.get("before"));
+
+  app.setFilter('podcasts', ["Polar Embrace"]);
+  app.setFilter('episodeGuids', ["65137f9b-62d6-4247-a17b-dff53926a1a9", "01dabf27-45ab-43cc-b4b6-b2897ecf20e5"]);
+  app.setFilter('eventGuids', ["6ec3cb1f-06c4-474b-8fc7-c2040d8c1968"]);
+
+  app.setListener(addBoost);
+  app.start();
+
+window.testBoost = (name, sats) => app.testBoost(name, sats);
+
+});
+</script>
+
+</body>
+</html>

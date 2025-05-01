@@ -90,7 +90,30 @@ class PaymentTracker {
     }
   }
 
+  testBoost(name, sats) {
+    this.add({
+      type: 'boost',
+      identifier: String(Math.floor(Math.random()*100000000)),
+      creation_date: Math.floor(Date.now() / 1000),
+      sats: sats,
+      sender_name: name,
+      app_name: 'Test',
+      podcast: 'Test',
+      event_guid: 'Test',
+      episode_guid: 'Test',
+      episode: 'Test',
+      isOld: false,
+      isTest: true,
+    })
+  }
+
   add(payment) {
+    if (payment.isTest) {
+      this.listener(payment, payment.isOld)
+      this.identifiers.push(payment.identifier)
+      return
+    }
+
     // Skip old items if loading is disabled for that type
     if (payment.isOld && payment.type === 'boost' && !this.loadBoosts) return
     if (payment.isOld && payment.type === 'zap' && !this.loadZaps) return
@@ -110,12 +133,9 @@ class PaymentTracker {
     if (this.filters.after && this.filters.after > payment.creation_date) return
 
     // Check podcast, event, or episode match if filters are set
-    const podcastMatch = this.filters.podcasts?.some(p => 
-      payment.podcast?.toLowerCase().includes(p?.toLowerCase()))
-    const eventGuidMatch = this.filters.eventGuids?.some(e => 
-      payment.event_guid === e)
-    const episodeGuidMatch = this.filters.episodeGuids?.some(e => 
-      payment.episode_guid === e)
+    const podcastMatch = this.filters.podcasts?.some(p => payment.podcast?.toLowerCase().includes(p?.toLowerCase()))
+    const eventGuidMatch = this.filters.eventGuids?.some(e => payment.event_guid === e)
+    const episodeGuidMatch = this.filters.episodeGuids?.some(e => payment.episode_guid === e)
 
     if (
       payment.type === 'boost' &&
