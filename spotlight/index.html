@@ -96,11 +96,11 @@
     overflow: hidden;
     min-height: 400px;
     height: 100%;
-    padding-top: 190px;
+    padding-top: 100px;
   }
 
   .board-content {
-    padding: 50px 70px;
+    padding: 20px 70px;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -179,7 +179,6 @@
     text-align: center;
     color: #5a3921;
     font-weight: bold;
-    margin-bottom: 25px;
     font-family: 'Satisfy', cursive;
     font-size: 1.2rem;
     text-transform: uppercase;
@@ -194,13 +193,12 @@
     }
     
     .board {
-      padding-top: 130px;
+      padding-top: 100px;
       margin: 0.5rem auto;
     }
     
     .board-content {
       padding: 15px;
-      padding-top: 40px;
     }
     
     .board-table tr {
@@ -222,7 +220,6 @@
     
     .section-title {
       font-size: 1rem;
-      margin-bottom: 15px;
     }
     
     #totalValue {
@@ -498,6 +495,11 @@ document.addEventListener('DOMContentLoaded', () => {
   app.setFilter('podcasts', ["Polar Embrace"]);
   app.setFilter('episodeGuids', ["65137f9b-62d6-4247-a17b-dff53926a1a9", "01dabf27-45ab-43cc-b4b6-b2897ecf20e5"]);
   app.setFilter('eventGuids', ["6ec3cb1f-06c4-474b-8fc7-c2040d8c1968"]);
+
+  // app.setFilter('podcasts', ["Satellite Spotlight"]);
+  // // app.setFilter('episodeGuids', ["65137f9b-62d6-4247-a17b-dff53926a1a9", "01dabf27-45ab-43cc-b4b6-b2897ecf20e5"]);
+  // app.setFilter('eventGuids', ["1e34e11b-f536-4280-b068-7dd1a9399b12"]);
+
 
   app.setListener(addBoost);
   app.start();
