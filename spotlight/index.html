@@ -75,6 +75,15 @@
     text-align: right;
   }
 
+  .vara {
+    position: relative;
+    top: 4px;
+  }
+
+  .board-table .text {
+    font-weight: bold;
+  }
+
   .board {
     background-image: url('nolines.webp');
     background-size: cover;
@@ -177,20 +186,6 @@
     letter-spacing: 2px;
   }
 
-  /* Make vara elements fit the lines */
-  .vara-container svg {
-    display: block !important;
-    visibility: visible !important;
-    height: 30px !important;
-    overflow: visible;
-    max-width: 100%;
-  }
-
-  /* Style for top boards */
-  .top-board {
-    margin-top: 40px;
-  }
-
   /* Responsive adjustments */
   @media (max-width: 480px) {
     body {
@@ -213,16 +208,16 @@
     }
     
     .board-table td:nth-child(1) {
-      width: 30px;
+      width: 10px;
     }
     
     .board-table td:nth-child(2) {
-      width: 20px;
+      width: 60px;
       display: none;
     }
     
     .board-table td:nth-child(4) {
-      width: 90px;
+      width: 70px;
     }
     
     .section-title {
@@ -341,6 +336,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const strokeWidth = 2;
 
+    const maxLength = (() => {
+      if (window.innerWidth <= 320) return 15;
+      if (window.innerWidth <= 480) return 18;
+      return 40;
+    })();
+
+
     this.varaPosition = new drawStuff(`#${id} .position`)
     this.varaName = new drawStuff(`#${id} .name`)
     this.varaSats = new drawStuff(`#${id} .sats`)
@@ -357,10 +359,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const {item, old} = this.queue.pop();
       this.queue = [];
 
-      const curduration = !old ? interval : 0;
-
-      const name = (item.name.length > 15)
-          ? item.name.slice(0, 15) + '...'
+      const name = (item.name.length > maxLength)
+          ? item.name.slice(0, maxLength) + '...'
           : item.name;
 
       this.varaPosition.setText(item.position)
@@ -374,7 +374,9 @@ document.addEventListener('DOMContentLoaded', () => {
     this.drawMode = false;
 
     this.el = document.querySelector(id)
-    this.el.innerHTML = '<div class="vara" style="display: none;"></div><div class="text" style="font-weight: bold; display: none;"></div>';
+    this.el.innerHTML =
+      '<div class="vara" style="display: none;"></div>' +
+      '<div class="text" style="display: none; font-weight: bold;"></div>';
 
     this.elText = this.el.querySelector('.text')
     this.elVara = this.el.querySelector('.vara')
