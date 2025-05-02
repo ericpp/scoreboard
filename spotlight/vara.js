@@ -12,6 +12,12 @@ const Vara = function (elem, fontSource, text, properties) {
   this.properties.textAlign = this.properties.textAlign || "left";
   this.letterSpacing = 0;
   this.element = document.querySelector(this.elementName);
+
+  if (!this.element) {
+    console.error(`Element "${this.elementName}" not found`);
+    return;
+  }
+
   this.fontSource = fontSource;
   this.characters = {};
   this.drawnCharacters = {};
@@ -20,11 +26,19 @@ const Vara = function (elem, fontSource, text, properties) {
   this.frameRate = 1000 / 30;
   this.prevDuration = 0;
   this.completed = false;
+
+  // Initialize promise to track completion
+  this.initializing = false;
+  this.initialized = false;
+
   this.ready = function (f) {
     _this.readyF = f;
+    return _this;
   };
+
   this.animationEnd = function (f) {
     _this.animationEndF = f;
+    return _this;
   };
 
   this.svg = this.createNode("svg", {
@@ -32,7 +46,32 @@ const Vara = function (elem, fontSource, text, properties) {
   });
   this.element.appendChild(this.svg);
   this.font = document.createElement("object");
-  this.getSVGData();
+
+  // Start initialization
+  this.init();
+
+  // Return this for method chaining
+  return this;
+};
+
+/**
+ * Initialize the Vara instance by loading the font and creating the text
+ * @returns {Promise} Promise that resolves when initialization is complete
+ */
+Vara.prototype.init = function() {
+  if (this.initializing) return;
+  this.initializing = true;
+
+  // Start initialization process
+  this.getSVGData()
+    .then(() => {
+      this.initialized = true;
+      this.initializing = false;
+    })
+    .catch(error => {
+      this.initializing = false;
+      console.error("Vara initialization failed:", error);
+    });
 };
 
 /**
@@ -61,19 +100,29 @@ const VaraFont = {
   loadFont: async function(url) {
     // Return cached font if available
     if (this.cache[url]) return this.cache[url];
-    
+
     // Return in-progress loading promise if exists
     if (this.loading[url]) return await this.loading[url];
-    
+
     // Start new loading process
     this.loading[url] = fetch(url)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to load font from ${url}: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      })
       .then(data => {
         this.cache[url] = data;
         delete this.loading[url];
         return data;
+      })
+      .catch(error => {
+        delete this.loading[url]; // Clean up the loading promise on error
+        console.error(`VaraFont error: ${error.message}`);
+        throw error; // Re-throw to allow caller to handle
       });
-    
+
     return await this.loading[url];
   }
 };
@@ -81,13 +130,29 @@ const VaraFont = {
 /**
  * Used to extract data from the JSON data
  */
-Vara.prototype.getSVGData =  async function () {
-  // const font = await this.loadFont();
-  const font = await VaraFont.loadFont(this.fontSource);
-  this.contents = font;
-  this.characters = font.c;
-  this.preCreate();
-  this.createText();
+Vara.prototype.getSVGData = async function () {
+  try {
+    // Load the font
+    const font = await VaraFont.loadFont(this.fontSource);
+    this.contents = font;
+    this.characters = font.c;
+
+    // Process and create text
+    this.preCreate();
+    this.createText();
+
+    // Return the contents for promise chaining
+    return this.contents;
+  } catch (error) {
+    console.error(`Failed to load or process font: ${error.message}`);
+
+    // Call the ready function with error if provided
+    if (this.readyF) {
+      this.readyF(error);
+    }
+
+    throw error;
+  }
 };
 
 /**
@@ -406,71 +471,137 @@ Vara.prototype.createText = function () {
 };
 
 Vara.prototype.playAll = function () {
+  // If not initialized, wait for initialization or initialize
+  if (!this.initialized) {
+    if (!this.initializing) {
+      this.init();
+    }
+
+    console.warn("Vara is still initializing. Animation will start when ready.");
+
+    // Setup a one-time ready function if not already set
+    const origReadyFn = this.readyF;
+    this.readyF = (error) => {
+      // First call original ready function if exists
+      if (origReadyFn) origReadyFn(error);
+
+      // Play all animations if initialization was successful
+      if (!error) this.playAll();
+
+      // Restore original ready function
+      this.readyF = origReadyFn;
+    };
+
+    return;
+  }
+
+  // Reset duration counter
   this.prevDuration = 0;
+
+  // Play each text
   for (var j = 0; j < this.texts.length; j++) {
     var duration = this.texts[j].duration;
     var id = this.texts[j].id == undefined ? j : this.texts[j].id;
     this.prevDuration += this.texts[j].delay;
-    this.draw(id, duration);
-    if (this.texts[j].queued == undefined || this.texts[j].queued) {
-      this.prevDuration += duration;
+
+    // Ensure the element exists before trying to animate it
+    if (this.drawnCharacters[id]) {
+      this.draw(id, duration);
+      if (this.texts[j].queued == undefined || this.texts[j].queued) {
+        this.prevDuration += duration;
+      }
+    } else {
+      console.warn(`ID:${id} not found. Animation skipped.`);
     }
   }
+
+  return this; // For method chaining
 };
 
 /**
  * Animates the drawing of the text
  * @param {int} id index or id of the paragraph to be animated.
- * @param {int} duration Duration of the animation in milliseconds
+ * @param {int} dur Duration of the animation in milliseconds
+ * @returns {Vara} The Vara instance for chaining
  */
 Vara.prototype.draw = function (id, dur) {
   /*
     This will iterate through each character, finds its path length and the total duration is divided with respect to its path length.
     */
   var _this = this;
+
+  // Check if the element exists
   if (this.drawnCharacters[id] == undefined) {
     console.warn("ID:`" + id + "` not found. Animation skipped");
     console.trace();
-    return;
+    return this;
   }
-  var duration =
-    dur === undefined
-      ? this.texts[this.drawnCharacters[id].index].duration
-      : dur;
+
+  // Ensure we have valid duration
+  var duration = dur === undefined
+    ? this.texts[this.drawnCharacters[id].index].duration
+    : dur;
+
+  duration = Math.max(0, Number(duration) || 0);
+
   var pathLength = this.getSectionPathLength(id);
   var delay = 0;
-  var queued =
-    this.drawnCharacters[id].queued == undefined
-      ? true
-      : this.drawnCharacters[id].queued;
+  var queued = this.drawnCharacters[id].queued == undefined
+    ? true
+    : this.drawnCharacters[id].queued;
   var timeOut = queued ? this.prevDuration : 1;
-  setTimeout(function () {
+
+  // Track timeout ID for clean handling
+  var timeoutId = setTimeout(function () {
+    // Check if characters array exists (might have been reset)
+    if (!_this.drawnCharacters[id] || !_this.drawnCharacters[id].characters) {
+      console.warn("Characters for ID:`" + id + "` no longer exist. Animation skipped");
+      return;
+    }
+
     _this.drawnCharacters[id].characters.forEach(function (i) {
-      i.querySelectorAll("path").forEach(function (j) {
-        var currentDuration =
-          (parseFloat(j.style.strokeDashoffset) / pathLength) * duration;
+      if (!i) return; // Skip if element is null/undefined
+
+      var paths = i.querySelectorAll("path");
+      if (!paths || paths.length === 0) return;
+
+      paths.forEach(function (j) {
+        var currentDuration = (parseFloat(j.style.strokeDashoffset) / pathLength) * duration;
         j.style.opacity = 1;
         _this.animate(j, currentDuration, delay, 0);
         delay += currentDuration;
       });
     });
+
+    // Call animation end after all elements are animated
     setTimeout(function () {
       if (_this.animationEndF) {
         _this.animationEndF(id, _this.drawnCharacters[id]);
       }
     }, delay);
   }, timeOut);
+
+  // Store timeout ID for potential cancellation
+  this.drawnCharacters[id].timeoutId = timeoutId;
+
+  return this;
 };
 
+/**
+ * Gets the drawn character information by ID
+ * @param {string|number} id ID of the paragraph
+ * @returns {object|null} Information about the drawn text or null if not found
+ */
 Vara.prototype.get = function (id) {
-  var _this = this;
   if (this.drawnCharacters[id] == undefined) {
     console.warn("ID:`" + id + "` not found.");
     console.trace();
-    return false;
+    return null;
   }
+
   return this.drawnCharacters[id];
 };
+
 /**
  * Handles animation of the stroke dashoffset
  * @param {Node} elem Element to be animated
@@ -479,32 +610,92 @@ Vara.prototype.get = function (id) {
  * @param {int} final Final position of the stroke Dashoffset
  */
 Vara.prototype.animate = function (elem, duration, delay, final) {
+  if (!elem || !elem.style) {
+    console.warn("Animation element is invalid");
+    return;
+  }
+
   var _this = this;
-  final = Number(final) || 0;
-  setTimeout(function () {
+  final = Number(final) ||.0;
+  duration = Math.max(0, Number(duration) || 0);
+  delay = Math.max(0, Number(delay) || 0);
+
+  // Store the current animation timer on the element for potential cancellation
+  if (elem._varaAnimationTimer) {
+    clearTimeout(elem._varaAnimationTimer);
+    delete elem._varaAnimationTimer;
+  }
+
+  elem._varaAnimationTimer = setTimeout(function () {
+    if (!elem || !elem.style) {
+      // Element may have been removed
+      return;
+    }
+
     var start = new Date().getTime();
     var initial = parseFloat(elem.style.strokeDashoffset);
-    var timer = setInterval(function () {
+
+    // Clean up any previous interval
+    if (elem._varaAnimationInterval) {
+      clearInterval(elem._varaAnimationInterval);
+    }
+
+    elem._varaAnimationInterval = setInterval(function () {
+      if (!elem || !elem.style) {
+        // Element may have been removed during animation
+        clearInterval(elem._varaAnimationInterval);
+        return;
+      }
+
       var step = Math.min(1, (new Date().getTime() - start) / duration);
-      var x = initial + step * (final - initial);
-      elem.style.strokeDashoffset = initial + step * (final - initial);
-      if (step == 1) clearInterval(timer);
+      var current = initial + step * (final - initial);
+
+      elem.style.strokeDashoffset = current;
+
+      if (step >= 1) {
+        clearInterval(elem._varaAnimationInterval);
+        delete elem._varaAnimationInterval;
+      }
     }, _this.frameRate);
   }, delay);
 };
+
 /**
  * Gets the path length of the entire paragraph
  * @param {int} id Index (id) of the paragraph
+ * @returns {number} The total path length
  */
 Vara.prototype.getSectionPathLength = function (id) {
+  if (!this.drawnCharacters[id] || !this.drawnCharacters[id].characters) {
+    console.warn(`Cannot calculate path length for ID:${id} - not found or has no characters`);
+    return 0;
+  }
+
   var _this = this;
   this.totalPathLength = 0;
-  this.drawnCharacters[id].characters.forEach(function (i) {
-    i.querySelectorAll("path").forEach(function (j) {
-      _this.totalPathLength += j.getTotalLength();
+
+  try {
+    this.drawnCharacters[id].characters.forEach(function (i) {
+      if (!i) return; // Skip if null/undefined
+
+      const paths = i.querySelectorAll("path");
+      if (!paths) return;
+
+      paths.forEach(function (j) {
+        if (!j) return; // Skip if path is null
+
+        try {
+          _this.totalPathLength += j.getTotalLength();
+        } catch (error) {
+          console.warn(`Error calculating path length: ${error.message}`);
+        }
+      });
     });
-  });
-  return this.totalPathLength;
+  } catch (error) {
+    console.error(`Error in getSectionPathLength: ${error.message}`);
+  }
+
+  return this.totalPathLength || 0.1; // Return at least a small value to avoid division by zero
 };
 
 /**
@@ -605,14 +796,12 @@ Vara.prototype.analyseWidth = function () {
       var lastSpace = 0;
       for (var i = 0; i < text.length; i++) {
         if (typeof letterSpacing === "object") {
-          if (typeof letterSpacing === "object") {
-            letterSpacing =
-              letterSpacing[text] === undefined
-                ? letterSpacing["global"] === undefined
-                  ? 0
-                  : letterSpacing["global"]
-                : letterSpacing[text];
-          }
+          letterSpacing =
+            letterSpacing[text[i]] === undefined
+              ? letterSpacing["global"] === undefined
+                ? 0
+                : letterSpacing["global"]
+              : letterSpacing[text[i]];
         }
         if (this.characters[text[i].charCodeAt(0)] != undefined) {
           increment = this.characters[text[i].charCodeAt(0)].w * scale;
@@ -654,6 +843,7 @@ Vara.prototype.analyseWidth = function () {
     breakPoints: breakPoints,
   };
 };
+
 /**
  * Sets the position of the node
  * @param {Node} e Element
@@ -699,17 +889,20 @@ Vara.prototype.setPosition = function (e, obj, relative) {
  * Resets the instance and allows redrawing with new text
  * @param {string|object} text New text to draw
  * @param {object} properties Optional properties to override
+ * @returns {Vara} The Vara instance for chaining
  */
 Vara.prototype.reset = function (text, properties) {
   // Save the container element and font source
   var elementName = this.elementName;
   var fontSource = this.fontSource;
-  
+
   // Clear SVG content
   if (this.svg) {
-    this.svg.innerHTML = '';
+    while (this.svg.firstChild) {
+      this.svg.removeChild(this.svg.firstChild);
+    }
   }
-  
+
   // Reset instance properties
   this.textsInit = [];
   if (typeof text == "string")
@@ -718,23 +911,26 @@ Vara.prototype.reset = function (text, properties) {
     });
   else if (typeof text == "object") this.textsInit = text;
   this.texts = this.textsInit;
-  
+
   // Update properties if provided
   if (properties) {
-    this.properties = properties;
+    this.properties = Object.assign({}, this.properties, properties);
   }
-  
+
   this.properties.textAlign = this.properties.textAlign || "left";
-  
+
   // Reset drawing state
   this.drawnCharacters = {};
   this.totalPathLength = 0;
   this.prevDuration = 0;
   this.completed = false;
-  
+  this.initialized = false;
+  this.initializing = false;
+
   // Process and draw the new text
-  this.preCreate();
-  this.createText();
+  this.init();
+
+  return this;
 };
 
 if (typeof module !== "undefined") {
