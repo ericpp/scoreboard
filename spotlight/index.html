@@ -121,7 +121,6 @@
   }
 
   .row > div {
-    border-bottom: 4px solid blue;
     margin: 0;
     padding: 0;
     text-align: center;
@@ -325,8 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.innerWidth <= 768) return 22;
       return 24;
     })();
-
-    const strokeWidth = 2;
 
     const maxLength = (() => {
       if (window.innerWidth <= 320) return 15;
