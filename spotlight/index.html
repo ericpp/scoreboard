@@ -47,10 +47,10 @@
   .board-table td {
     border-right: 4px solid black;
     border-bottom: 4px solid black;
-    vertical-align: bottom;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    padding: 0.25rem;
   }
 
   .board-table tr:last-child td {
@@ -359,8 +359,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const curduration = !old ? interval : 0;
 
-      const name = (item.name.length > 12)
-          ? item.name.slice(0, 12) + '...'
+      const name = (item.name.length > 15)
+          ? item.name.slice(0, 15) + '...'
           : item.name;
 
       this.varaPosition.setText(item.position)
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     this.drawMode = false;
 
     this.el = document.querySelector(id)
-    this.el.innerHTML = '<div class="vara"></div><div class="text" style="font-weight: bold;"></div>';
+    this.el.innerHTML = '<div class="vara" style="display: none;"></div><div class="text" style="font-weight: bold; display: none;"></div>';
 
     this.elText = this.el.querySelector('.text')
     this.elVara = this.el.querySelector('.vara')
@@ -402,8 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return
       }
 
-      this.lastText = text;
-
       if (!this.drawMode) {
         this.elText.innerText = text
         this.elText.style.display = ""
@@ -423,6 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
           ...props,
         }])
       }
+
+      this.lastText = text;
+      this.drawMode = false;
     }
 
     setInterval(() => {
