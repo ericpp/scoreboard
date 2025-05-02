@@ -54,24 +54,40 @@ Vara.prototype.createNode = function (n, v) {
   return n;
 };
 
+const VaraFont = {
+  loading: {},
+  cache: {},
+
+  loadFont: async function(url) {
+    // Return cached font if available
+    if (this.cache[url]) return this.cache[url];
+    
+    // Return in-progress loading promise if exists
+    if (this.loading[url]) return await this.loading[url];
+    
+    // Start new loading process
+    this.loading[url] = fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        this.cache[url] = data;
+        delete this.loading[url];
+        return data;
+      });
+    
+    return await this.loading[url];
+  }
+};
+
 /**
  * Used to extract data from the JSON data
  */
-Vara.prototype.getSVGData = function () {
-  var _this = this;
-  var xmlhttp = new XMLHttpRequest();
-  xmlhttp.open("GET", this.fontSource, true);
-  xmlhttp.onreadystatechange = function () {
-    if (xmlhttp.readyState == 4) {
-      if (xmlhttp.status == 200) {
-        _this.contents = JSON.parse(xmlhttp.responseText);
-        _this.characters = JSON.parse(xmlhttp.responseText).c;
-        _this.preCreate();
-        _this.createText();
-      }
-    }
-  };
-  xmlhttp.send(null);
+Vara.prototype.getSVGData =  async function () {
+  // const font = await this.loadFont();
+  const font = await VaraFont.loadFont(this.fontSource);
+  this.contents = font;
+  this.characters = font.c;
+  this.preCreate();
+  this.createText();
 };
 
 /**
