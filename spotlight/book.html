@@ -1,0 +1,303 @@
+<html>
+<head>
+<title>Spotlight board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../board.js"></script>
+<script src="vara.js"></script>
+
+<style>
+  @font-face {
+    font-family: 'Satisfy';
+    src: url('Satisfy-Regular.ttf') format('truetype');
+  }
+
+  body {
+    color: #333;
+    font-family: 'Satisfy', cursive;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .vara {
+    position: relative;
+    top: 4px;
+  }
+
+  .sideBySide {
+    display: flex;
+    margin-top: 400px;
+    gap: 40px;
+    align-items: center;
+  }
+
+  .board {
+    margin: 1rem auto;
+    width: 994px;
+    height: 786px;
+  }
+
+  .board-table {
+    position: relative;
+    border-spacing: 0;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .board-table tr {
+    height: 34px;
+  }
+
+  .board-table td {
+    border-right: 4px solid black;
+    border-bottom: 4px solid black;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 0.25rem;
+    text-align: center;
+  }
+
+  .board-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .board-table td.position {
+    width: 30px;
+  }
+
+  .board-table td.name {
+    width: auto;
+  }
+
+  .board-table td.sats {
+    width: 100px;
+  }
+
+  .board-table .text {
+    font-weight: bold;
+  }
+
+  .totalValue, .section-title {
+    text-align: center;
+    font-weight: bold;
+    color: #5a3921;
+    font-family: 'Satisfy', cursive;
+  }
+
+  .totalValue {
+    font-size: 2rem;
+    height: 2rem;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <div class="totalSats">
+    <div>
+      <div class="section-title">TOTAL SATS RECEIVED</div>
+      <div class="totalValue">0</div>
+    </div>
+  </div>
+  
+  <div class="sideBySide">
+    <table id="boostsBoard" class="board-table">
+      <tbody></tbody>
+    </table>
+
+    <table id="appsBoard" class="board-table">
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const scoreSlots = 10; // Increased to match lines in paper
+  const appSlots = 5;
+  const maxLength = 40;
+
+  function drawVara(id, interval) {
+    this.queue = [];
+    this.prevItem = {
+      position: "",
+      name: "",
+      sats: "",
+    }
+
+    this.varaPosition = new drawStuff(`#${id} .position`)
+    this.varaName = new drawStuff(`#${id} .name`)
+    this.varaSats = new drawStuff(`#${id} .sats`)
+
+    this.push = (item, old) => {
+      this.queue.push({item, old});
+    }
+
+    setInterval(() => {
+      if (this.queue.length == 0) {
+        return
+      }
+
+      const {item, old} = this.queue.pop();
+      this.queue = [];
+
+      const name = (item.name.length > maxLength)
+          ? item.name.slice(0, maxLength) + '...'
+          : item.name;
+
+      this.varaPosition.setText(item.position)
+      this.varaName.setText(name)
+      this.varaSats.setText(item.sats)
+    }, 100)
+  }
+
+  function drawStuff(id, props = {}) {
+    this.lastText = "";
+    this.drawMode = false;
+
+    this.el = document.querySelector(id)
+    this.el.innerHTML =
+      '<div class="vara" style="display: none;"></div>' +
+      '<div class="text" style="display: none; font-weight: bold;"></div>';
+
+    this.elText = this.el.querySelector('.text')
+    this.elVara = this.el.querySelector('.vara')
+
+    this.textStyle = window.getComputedStyle(this.elText)
+    this.fontSize = parseInt(this.textStyle.fontSize) + 4
+
+    this.vara = new Vara(
+      `${id} .vara`,
+      "https://cdn.jsdelivr.net/gh/akzhy/vara@master/fonts/Satisfy/SatisfySL.json",
+      [{
+        text: "",
+        delay: 0,
+        duration: 0,
+        textAlign: this.textStyle.textAlign,
+        color: this.textStyle.color,
+        fontSize: this.fontSize,
+        strokeWidth: 3,
+        ...props,
+      }]
+    );
+
+    this.setText = (text) => {
+      if (this.lastText == text) {
+        return
+      }
+
+      if (!this.drawMode) {
+        this.elText.innerText = text
+        this.elText.style.display = ""
+        this.elVara.style.display = "none"
+      }
+      else {
+        this.elText.style.display = "none"
+        this.elVara.style.display = ""
+
+        this.vara.reset([{
+          text: String(text),
+          delay: 0,
+          textAlign: this.textStyle.textAlign,
+          color: this.textStyle.color,
+          fontSize: this.fontSize,
+          strokeWidth: 3,
+          ...props,
+        }])
+      }
+
+      this.lastText = text;
+      this.drawMode = false;
+    }
+
+    setInterval(() => {
+      this.drawMode = true;
+    }, 5000);
+  }
+
+  function createBoard(id, field, numSlots) {
+    const table = document.querySelector(`#${id} tbody`);
+
+    // Create rows for top boosters
+    for (let i = 1; i <= numSlots; i++) {
+      const row = document.createElement('tr');
+      row.id = `${id}-${i}`;
+      row.innerHTML = `
+          <td class="position"></td>
+          <td class="name"></td>
+          <td class="sats"></td>
+      `;
+      table.appendChild(row);
+    }
+    
+    let instances = [];
+
+    for (let i = 1; i <= numSlots; i++) {
+      instances[i] = new drawVara(`${id}-${i}`, 500)
+    }
+
+    return new Scores(field, numSlots, (score, old) => {
+      const sats = score.sats ? score.sats.toLocaleString() : "0";
+      const name = score.name || "";
+
+      instances[score.position].push({
+        position: score.position,
+        name: name,
+        sats: sats,
+      }, old)
+    });
+  }
+
+  function addBoost(payment, old) {
+      topBoosters.add(payment, old);
+      topApps.add(payment, old);
+      totalSats.add(payment, old);
+  }
+
+  const topBoosters = createBoard('boostsBoard', 'sender_name', scoreSlots);
+  const topApps = createBoard('appsBoard', 'app_name', appSlots);
+
+  let totalVara = new drawStuff('.totalValue')
+  let totalSats = new SatCounter((total) => {
+    totalVara.setText(total)
+  }, false)
+
+  // Initialize tracker
+  let app = new PaymentTracker();
+
+  app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce");
+
+  let params = (new URL(document.location)).searchParams;
+
+  app.setFilter('after', params.get("after") || "2025-01-11 00:00:00 -0500");
+  app.setFilter('before', params.get("before"));
+
+  // app.setFilter('podcasts', ["Polar Embrace"]);
+  // app.setFilter('episodeGuids', ["65137f9b-62d6-4247-a17b-dff53926a1a9", "01dabf27-45ab-43cc-b4b6-b2897ecf20e5"]);
+  // app.setFilter('eventGuids', ["6ec3cb1f-06c4-474b-8fc7-c2040d8c1968"]);
+
+  app.setFilter('podcasts', ["Satellite Spotlight"]);
+  app.setFilter('episodeGuids', ["d141d070-7ca4-4792-86a0-a32740111335"]);
+  app.setFilter('eventGuids', ["1e34e11b-f536-4280-b068-7dd1a9399b12"]);
+
+  app.setListener(addBoost);
+  app.start();
+
+window.testBoost = (name, sats) => app.testBoost(name, sats);
+
+});
+</script>
+
+</body>
+</html>
