@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>Spotlight board</title>
+<title>Spotlight Book Board</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
 
 <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
@@ -30,9 +30,14 @@
 
   .sideBySide {
     display: flex;
-    margin-top: 400px;
     gap: 40px;
-    align-items: center;
+  }
+
+  .side {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
 
   .board {
@@ -42,7 +47,6 @@
   }
 
   .board-table {
-    position: relative;
     border-spacing: 0;
     width: 100%;
     table-layout: fixed;
@@ -82,43 +86,47 @@
     font-weight: bold;
   }
 
-  .totalValue, .section-title {
+  .total-value, .total-title {
     text-align: center;
     font-weight: bold;
     color: #5a3921;
     font-family: 'Satisfy', cursive;
   }
 
-  .totalValue {
+  .total-value {
     font-size: 2rem;
     height: 2rem;
   }
 
-  .section-title {
+  .total-title {
     font-size: 1.2rem;
     text-transform: uppercase;
     letter-spacing: 2px;
   }
+
 </style>
 </head>
 <body>
 
 <div class="board">
-  <div class="totalSats">
-    <div>
-      <div class="section-title">TOTAL SATS RECEIVED</div>
-      <div class="totalValue">0</div>
-    </div>
-  </div>
   
   <div class="sideBySide">
-    <table id="boostsBoard" class="board-table">
-      <tbody></tbody>
-    </table>
+    <div class="side">
+      <table id="boostsBoard" class="board-table">
+        <tbody></tbody>
+      </table>
+    </div>
 
-    <table id="appsBoard" class="board-table">
-      <tbody></tbody>
-    </table>
+    <div class="side">
+      <table id="appsBoard" class="board-table">
+        <tbody></tbody>
+      </table>
+
+      <div>
+        <div class="total-title">TOTAL SATS RECEIVED</div>
+        <div class="total-value">0</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -268,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const topBoosters = createBoard('boostsBoard', 'sender_name', scoreSlots);
   const topApps = createBoard('appsBoard', 'app_name', appSlots);
 
-  let totalVara = new drawStuff('.totalValue')
+  let totalVara = new drawStuff('.total-value')
   let totalSats = new SatCounter((total) => {
     totalVara.setText(total)
   }, false)
