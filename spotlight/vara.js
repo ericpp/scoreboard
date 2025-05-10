@@ -870,7 +870,7 @@ Vara.prototype.setPosition = function (e, obj, relative) {
   }
   if (obj.y != undefined) {
     if (relative.y) y = y + obj.y;
-    else y = obj.y - e.getBBox().y;
+    else y = Math.max(obj.y - e.getBBox().y, 0);
   }
 
   var translate = this.svg.createSVGTransform();
