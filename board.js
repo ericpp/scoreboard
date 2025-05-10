@@ -118,7 +118,9 @@ class Scores {
   }
 
   add(payment, old) {
-    const name = payment[this.metric].toUpperCase()
+    const name = payment[this.metric]
+      .toUpperCase()
+      .replace(/[^ -~]+/g, "")
 
     if (!this.scores[name]) {
       this.scores[name] = { name, sats: 0 }
