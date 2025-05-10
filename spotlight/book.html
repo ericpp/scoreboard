@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const appSlots = 5;
   const maxLength = 40;
 
-  function drawVara(id, interval) {
+  function BoardRow(id) {
     this.queue = [];
     this.prevItem = {
       position: "",
@@ -144,9 +144,20 @@ document.addEventListener('DOMContentLoaded', () => {
       sats: "",
     }
 
-    this.varaPosition = new drawStuff(`#${id} .position`)
-    this.varaName = new drawStuff(`#${id} .name`)
-    this.varaSats = new drawStuff(`#${id} .sats`)
+    const maxLength = (() => {
+      if (window.innerWidth <= 320) return 15;
+      if (window.innerWidth <= 480) return 18;
+      return 40;
+    })();
+
+    this.varaPosition = new TextDraw(`#${id} .position`)
+    this.varaName = new TextDraw(`#${id} .name`)
+    this.varaSats = new TextDraw(
+      `#${id} .sats`,
+      {
+        letterSpacing: 1,
+      }
+    )
 
     this.push = (item, old) => {
       this.queue.push({item, old});
@@ -170,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100)
   }
 
-  function drawStuff(id, props = {}) {
+  function TextDraw(id, props = {}) {
     this.lastText = "";
     this.drawMode = false;
 
@@ -252,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let instances = [];
 
     for (let i = 1; i <= numSlots; i++) {
-      instances[i] = new drawVara(`${id}-${i}`, 500)
+      instances[i] = new BoardRow(`${id}-${i}`)
     }
 
     return new Scores(field, numSlots, (score, old) => {
@@ -276,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const topBoosters = createBoard('boostsBoard', 'sender_name', scoreSlots);
   const topApps = createBoard('appsBoard', 'app_name', appSlots);
 
-  let totalVara = new drawStuff('.total-value')
+  let totalVara = new TextDraw('.total-value')
   let totalSats = new SatCounter((total) => {
     totalVara.setText(total)
   }, false)
