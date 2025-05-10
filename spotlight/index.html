@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     return new Scores(field, numSlots, (score, old) => {
-      const sats = score.sats ? score.sats.toLocaleString() : "0";
+      const sats = score.sats ? score.sats.toLocaleString() : "";
       const name = score.name || "";
 
       instances[score.position].push({
