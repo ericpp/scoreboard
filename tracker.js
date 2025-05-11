@@ -178,6 +178,7 @@ class NostrWatcher {
     let isOld = true
     let isOldTimeout = null
     const parsedPubkey = this.parsePubkey(nostrPubkey)
+    const self = this
 
     this.nostrPool.subscribeMany(this.nostrRelays, [{authors: [parsedPubkey]}], {
       async onevent(event) {
@@ -213,6 +214,11 @@ class NostrWatcher {
       },
       oneose() {
         // Subscription completed
+      },
+      onclose() {
+        // Subscription closed
+        console.log('Socket closed, reconnecting and resubscribing to boosts...')
+        self.subscribeBoosts(nostrPubkey, callback)
       }
     })
   }
@@ -263,6 +269,11 @@ class NostrWatcher {
       },
       oneose() {
         // Subscription completed
+      },
+      onclose() {
+        // Subscription closed
+        console.log('Socket closed, reconnecting and resubscribing to zaps...')
+        self.subscribeZaps(nostrActivity, callback)
       }
     })
   }
