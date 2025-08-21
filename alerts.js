@@ -94,12 +94,12 @@ class AlertSlot {
     this.alert.onTimeUpdate(this.handleTimeUpdate.bind(this))
   }
 
-  pickImage(payment) {
+  pickImage(payment, isReplay) {
     if (this.triggers.length) {
       const strSats = String(payment.sats)
 
       const img = this.triggers.find(trig =>
-        (trig.threshold && payment.satTotal >= trig.threshold && payment.lastSatTotal < trig.threshold) ||
+        (trig.threshold && payment.satTotal >= trig.threshold && payment.lastSatTotal < trig.threshold && !isReplay) ||
         (trig.endsWith && strSats.endsWith(trig.endsWith)) ||
         (trig.contains && strSats.includes(trig.contains))
       )
@@ -203,9 +203,9 @@ class AlertSlot {
     this.alert.play()
   }
 
-  show(payment) {
+  show(payment, isReplay) {
     this.payment = payment
-    this.pickImage(payment)
+    this.pickImage(payment, isReplay)
     this.setMessage(
       this.renderMessage(this.payment, this.events.messageRender),
       payment.picture
@@ -234,6 +234,7 @@ async function startAlerts(config = {}) {
   let curSlot = 0
 
   const alertQueue = []
+  let replayTime = 0
 
   let satTotal = 0
   let lastSatTotal = 0
@@ -264,7 +265,7 @@ async function startAlerts(config = {}) {
 
     lastSatTotal = payment.satTotal
 
-    if (payment.isOld && !url.test) {
+    if (payment.isOld && !url.test && !url.replay) {
       return
     }
 
@@ -302,12 +303,21 @@ async function startAlerts(config = {}) {
   function handleAlertQueue() {
     if (alertQueue.length === 0) return
 
+    if (url.replay && replayTime === 0) {
+      replayTime = alertQueue[0].creation_date
+    }
+
+    if (url.replay && alertQueue[0].creation_date > replayTime) {
+      replayTime++
+      return
+    }
+
     const availableSlots = getAvailableSlots()
     if (availableSlots.length === 0) return
 
     const { slot, newSlot } = selectSlot(availableSlots)
     curSlot = newSlot
-    slot.show(alertQueue.shift())
+    slot.show(alertQueue.shift(), url.replay)
   }
 
   function init() {
@@ -337,6 +347,11 @@ async function startAlerts(config = {}) {
         "type": "boost"
       })
 
+      app.loadBoosts = true
+      app.loadZaps = true
+    }
+
+    if (url.replay) {
       app.loadBoosts = true
       app.loadZaps = true
     }

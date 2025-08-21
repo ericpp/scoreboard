@@ -37,8 +37,13 @@ class PaymentTracker {
 
   parseFilterValue(name, value) {
     if ((name === 'before' || name === 'after') && typeof value !== "number") {
+      if (typeof value === "string" && /^\d+$/.test(value)) {
+        return parseInt(value)
+      }
+
       return Math.floor(new Date(value) / 1000)
     }
+
     return value
   }
 
@@ -386,6 +391,11 @@ class StoredBoosts {
         Math.max(...boosts.map(x => x.creation_date))
       )
 
+      // Sort boosts by creation date for replaying
+      boosts.sort(
+        (a, b) => a.creation_date - b.creation_date
+      )
+
       // Process boosts
       for (const invoice of boosts) {
         if (!invoice.boostagram) continue
@@ -421,6 +431,7 @@ class RemoteItemInfo {
   constructor() {
     this.resolved = {}
     this.queue = {}
+    this.inProgress = {} // Track requests in progress to prevent duplicates
     
     this.setupItemResolution()
   }
@@ -459,15 +470,27 @@ class RemoteItemInfo {
       for (const item of Object.values(this.queue)) {
         const key = `${item.podcastguid}|${item.episodeguid}`
 
-        if (this.resolved[key] === undefined) {
-          this.resolved[key] = await this.fetch(item.podcastguid, item.episodeguid)
+        // Only fetch if not already resolved and not currently in progress
+        if (this.resolved[key] === undefined && !this.inProgress[key]) {
+          this.inProgress[key] = true
+          try {
+            this.resolved[key] = await this.fetch(item.podcastguid, item.episodeguid)
+          } catch (error) {
+            console.error(`Failed to fetch remote info for ${key}:`, error)
+            this.resolved[key] = {} // Set empty object on error to prevent retries
+          } finally {
+            delete this.inProgress[key]
+          }
         }
 
-        const resolvers = [...item.resolvers]
-        item.resolvers = []
-        
-        for (const resolver of resolvers) {
-          resolver(this.resolved[key])
+        // Only resolve if we have a result (either cached or just fetched)
+        if (this.resolved[key] !== undefined && item.resolvers.length > 0) {
+          const resolvers = [...item.resolvers]
+          item.resolvers = []
+
+          for (const resolver of resolvers) {
+            resolver(this.resolved[key])
+          }
         }
       }
     }, 100)
