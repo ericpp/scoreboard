@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dt.setDate(dt.getDate() - 30)
     const lastMonth = dt.toISOString().slice(0, 10)
 
-    app.setFilter('after', params.get("after") || lastMonth)
+    app.setFilter('after', params.get("after"))
     app.setFilter('before', params.get("before"))
 
     const items = ["podcasts", "episodeGuids", "eventGuids"]
@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!podcasts) {
         app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Mutton, Mead & Music"])
+        app.setFilter('after', params.get("after") || lastMonth)
     }
 
     const enableCsv = params.get('csv')
