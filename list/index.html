@@ -58,13 +58,19 @@ document.addEventListener('DOMContentLoaded', () => {
     app.setFilter('after', params.get("after") || lastMonth)
     app.setFilter('before', params.get("before"))
 
-    const podcast = params.get("podcast")
+    const items = ["podcasts", "episodeGuids", "eventGuids"]
+    items.forEach(key => {
+        const value = params.get(key)
 
-    if (podcast) {
-        app.setFilter('podcast', podcast)
-    }
-    else {
-        app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods"])
+        if (value) {
+            app.setFilter(key, value.split(/,/))
+        }
+    })
+
+    const podcasts = params.get("podcasts")
+
+    if (!podcasts) {
+        app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Mutton, Mead & Music"])
     }
 
     const enableCsv = params.get('csv')
