@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SO BIG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../board.js"></script>
+
+<style>
+  @font-face {
+    font-family: 'Oswald';
+    src: url('oswald/Oswald-Bold.ttf') format('truetype');
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    font-size: 0.875rem;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    color: #000;
+    background-color: #f90;
+  }
+
+  h1 {
+    font-size: 1.7rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  .board {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  .board-img {
+    position: absolute;
+    top: 0;
+    height: 100%;
+  }
+
+  .board-content-wrapper {
+    position: relative;
+    top: -100%;
+    margin-top: 26vh;
+    margin-left: 18vh;
+    width: 44.04vh;
+  }
+
+  #latestMessage {
+    text-align: center;
+    min-height: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.7rem;
+    line-height: 1.9rem;
+  }
+
+  .board-table {
+    width: 100%;
+    border-spacing: 0;
+    font-size: 1.7rem;
+    line-height: 1.9rem;
+  }
+
+  .board-table td {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: bold;
+  }
+
+  .board-table td:first-child {
+    text-align: left;
+    width: 290px;
+  }
+
+  .board-table td:last-child {
+    text-align: right;
+  }
+
+  .name {
+    color: #000;
+    text-shadow: 0 0 1px #ccc;
+  }
+
+  .sats {
+    color: #f00;
+    text-shadow: 0 0 1px #c00;
+  }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <div class="board-img">
+    <img src="background.png" style="height: 100%;">
+    
+    <div class="board-content-wrapper">
+      <div id="latestMessage">FRESH BOOSTAGRAMS SERVED HERE</div>
+      
+      <div id="boostsBoard">
+        <h1>* * * TOP BOOSTERS * * *</h1>
+        <table class="board-table"><tbody></tbody></table>
+      </div>
+      
+      <div id="appsBoard">
+        <h1>* * * TOP APPS * * *</h1>
+        <table class="board-table"><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  scoreSlots: 10,
+  appSlots: 5,
+  maxNameLength: window.innerWidth <= 320 ? 15 : window.innerWidth <= 480 ? 18 : 40
+};
+
+class BoardRow {
+  constructor(id) {
+    this.nameEl = document.querySelector(`#${id} .name`);
+    this.satsEl = document.querySelector(`#${id} .sats`);
+  }
+
+  update(name, sats) {
+    const truncatedName = name.length > CONFIG.maxNameLength 
+      ? name.slice(0, CONFIG.maxNameLength) + '...' 
+      : name;
+    
+    this.nameEl.textContent = truncatedName;
+    this.satsEl.textContent = sats;
+  }
+}
+
+function createBoard(id, field, numSlots) {
+  const tbody = document.querySelector(`#${id} tbody`);
+  const rows = [];
+
+  for (let i = 1; i <= numSlots; i++) {
+    const tr = document.createElement('tr');
+    tr.id = `${id}-${i}`;
+    tr.innerHTML = '<td class="name"></td><td class="sats"></td>';
+    tbody.appendChild(tr);
+    rows[i] = new BoardRow(`${id}-${i}`);
+  }
+
+  return new Scores(field, numSlots, (score) => {
+    const sats = score.sats?.toLocaleString() || '';
+    const name = score.name || '';
+    rows[score.position].update(name, sats);
+  });
+}
+
+function updateLatestBoost(boost) {
+  const { sender_name, sats, type, app_name, message } = boost;
+  const app = type === 'boost' ? `FROM ${app_name}` : 'FROM NOSTR';
+  
+  const messages = [];
+  if (message) messages.push(`"${message}"`);
+  messages.push(`${sender_name} VIA ${app}`.toUpperCase());
+  
+  const latestEl = document.querySelector('#latestMessage');
+  latestEl.innerHTML = '';
+  
+  messages.forEach(m => {
+    const div = document.createElement('div');
+    div.textContent = m;
+    latestEl.appendChild(div);
+  });
+  
+  const satsDiv = document.createElement('div');
+  satsDiv.className = 'sats';
+  satsDiv.textContent = `${sats.toLocaleString()} SATS`;
+  latestEl.appendChild(satsDiv);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const topBoosters = createBoard('boostsBoard', 'sender_name', CONFIG.scoreSlots);
+  const topApps = createBoard('appsBoard', 'app_name', CONFIG.appSlots);
+  const latestBoost = new LatestPaymentRaw(updateLatestBoost);
+
+  function addBoost(payment, old) {
+    topBoosters.add(payment, old);
+    topApps.add(payment, old);
+    latestBoost.add(payment, old);
+  }
+
+  const app = new PaymentTracker();
+  const params = new URLSearchParams(window.location.search);
+
+  app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce");
+  app.setFilter('after', params.get("after") || "2025-01-11 00:00:00 -0500");
+  app.setFilter('before', params.get("before"));
+  app.setFilter('podcasts', ["Satellite Spotlight"]);
+  app.setFilter('episodeGuids', ["d141d070-7ca4-4792-86a0-a32740111335"]);
+  app.setFilter('eventGuids', ["1e34e11b-f536-4280-b068-7dd1a9399b12"]);
+  app.setListener(addBoost);
+  app.start();
+
+  window.testBoost = (name, sats) => app.testBoost(name, sats);
+});
+</script>
+
+</body>
+</html>

@@ -45,6 +45,21 @@ class SatCounter {
   }
 }
 
+class LatestPaymentRaw {
+  constructor(renderer) {
+    this.current = null
+    this.renderer = renderer
+  }
+
+  add(boost) {
+    if (this.current && this.current.creation_date > boost.creation_date) return
+    if (boost.action !== 'boost' && boost.action !== 'zap') return
+
+    this.current = boost
+    this.renderer(this.current)
+  }
+}
+
 class LatestPayment {
   constructor(renderer) {
     this.current = null
