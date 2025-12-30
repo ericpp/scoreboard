@@ -8,45 +8,43 @@
 <script src="../board.js"></script>
 
 <style>
+  :root {
+    --color-primary: #46c4f6;
+    --color-text: #000;
+    --color-text-shadow: #ccc;
+    --color-sats: #f00;
+    --color-sats-shadow: #c00;
+    --font-size-base: 1.25rem;
+  }
+
   @font-face {
     font-family: 'Oswald';
     src: url('oswald/Oswald-Bold.ttf') format('truetype');
   }
 
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
 
   html {
-    font-size: 1.25rem;
-    /* font-size: 0.875rem; */
-    /* font-size: 0.75rem; */
+    font-size: var(--font-size-base);
   }
 
   body {
     margin: 0;
     font-family: 'Oswald', sans-serif;
-    color: #000;
-    background-color: #46c4f6;
+    color: var(--color-text);
+    background-color: var(--color-primary);
   }
 
   h1 {
-    /* font-size: 1.7rem; */
     font-size: 1rem;
     text-align: center;
     margin: 0;
   }
 
   .board {
-    /* display: flex;
-    justify-content: center; */
-    /* align-items: center; */
-    /* height: 100vh; */
-  }
-
-  .board-img {
     position: absolute;
-    /* top: 0; */
-    /* width: 299px; */
-    /* height: 884px; */
     min-height: 100%;
     display: flex;
     flex-direction: column;
@@ -54,20 +52,13 @@
     justify-content: center;
   }
 
-  .board-content-wrapper {
-    /* position: absolute; */
-    /* top: 0;
-    margin-left: 20px;
-    margin-top: 145px;
-    width: 85%; */
-    /* margin-top: 26vh;
-    margin-left: 18vh; */
-    /* max-width: 44.04vh; */
-    /* width: 100%; */
-    padding-left: 20px;
-    padding-right: 20px;
-    background-image: url('bg-middle.png');
-    background-size: 100%;
+  .board-bg-image {
+    width: 100%;
+  }
+
+  .board-content {
+    padding: 0 20px;
+    background: url('bg-middle.png') 100% / 100%;
     flex: 1;
   }
 
@@ -75,15 +66,11 @@
     text-align: center;
     min-height: 1.5rem;
     margin-bottom: 0.5rem;
-    /* font-size: 1.7rem; */
-    /* line-height: 1.9rem; */
   }
 
   .board-table {
     width: 100%;
     border-spacing: 0;
-    /* font-size: 1.7rem; */
-    /* line-height: 1.9rem; */
   }
 
   .board-table td {
@@ -103,38 +90,36 @@
   }
 
   .name {
-    color: #000;
-    text-shadow: 0 0 1px #ccc;
+    color: var(--color-text);
+    text-shadow: 0 0 1px var(--color-text-shadow);
   }
 
   .sats {
-    color: #f00;
-    text-shadow: 0 0 1px #c00;
+    color: var(--color-sats);
+    text-shadow: 0 0 1px var(--color-sats-shadow);
   }
 </style>
 </head>
 <body>
 
 <div class="board">
-  <div class="board-img">
-    <img src="bg-top.png" style="width: 100%;">
-    
-    <div class="board-content-wrapper">
-      <div id="latestMessage">FRESH BOOSTAGRAMS SERVED HERE</div>
-      
-      <div id="boostsBoard">
-        <h1>* * * TOP BOOSTERS * * *</h1>
-        <table class="board-table"><tbody></tbody></table>
-      </div>
-      
-      <div id="appsBoard">
-        <h1>* * * TOP APPS * * *</h1>
-        <table class="board-table"><tbody></tbody></table>
-      </div>
-    </div>
+  <img src="bg-top.png" class="board-bg-image" alt="Board top">
 
-    <img src="bg-bottom.png" style="width: 100%;">
+  <div class="board-content">
+    <div id="latestMessage">FRESH BOOSTAGRAMS SERVED HERE</div>
+
+    <section id="boostsBoard">
+      <h1>* * * TOP BOOSTERS * * *</h1>
+      <table class="board-table"><tbody></tbody></table>
+    </section>
+
+    <section id="appsBoard">
+      <h1>* * * TOP APPS * * *</h1>
+      <table class="board-table"><tbody></tbody></table>
+    </section>
   </div>
+
+  <img src="bg-bottom.png" class="board-bg-image" alt="Board bottom">
 </div>
 
 <script>
@@ -151,10 +136,10 @@ class BoardRow {
   }
 
   update(name, sats) {
-    const truncatedName = name.length > CONFIG.maxNameLength 
-      ? name.slice(0, CONFIG.maxNameLength) + '...' 
+    const truncatedName = name.length > CONFIG.maxNameLength
+      ? name.slice(0, CONFIG.maxNameLength) + '...'
       : name;
-    
+
     this.nameEl.textContent = truncatedName;
     this.satsEl.textContent = sats;
   }
@@ -182,20 +167,20 @@ function createBoard(id, field, numSlots) {
 function updateLatestBoost(boost) {
   const { sender_name, sats, type, app_name, message } = boost;
   const app = type === 'boost' ? `FROM ${app_name}` : 'FROM NOSTR';
-  
+
   const messages = [];
   if (message) messages.push(`"${message}"`);
   messages.push(`${sender_name} VIA ${app}`.toUpperCase());
-  
+
   const latestEl = document.querySelector('#latestMessage');
   latestEl.innerHTML = '';
-  
+
   messages.forEach(m => {
     const div = document.createElement('div');
     div.textContent = m;
     latestEl.appendChild(div);
   });
-  
+
   const satsDiv = document.createElement('div');
   satsDiv.className = 'sats';
   satsDiv.textContent = `${sats.toLocaleString()} SATS`;
