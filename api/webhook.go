@@ -111,8 +111,14 @@ func fetchRSSPaymentBoostagram(url string) (interface{}, error) {
 		return nil, fmt.Errorf("x-rss-payment header not found")
 	}
 
+	// URL-decode the header value before parsing as JSON
+	decodedHeader, err := url.QueryUnescape(rssPaymentHeader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode x-rss-payment header: %w", err)
+	}
+
 	var boostagram interface{}
-	if err := json.Unmarshal([]byte(rssPaymentHeader), &boostagram); err != nil {
+	if err := json.Unmarshal([]byte(decodedHeader), &boostagram); err != nil {
 		return nil, fmt.Errorf("failed to parse x-rss-payment header: %w", err)
 	}
 
