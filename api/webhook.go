@@ -138,17 +138,24 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 }
 
 func PublishToNostr(invoice IncomingInvoice) error {
-	js, err := json.Marshal(invoice)
+	serialized, err := json.Marshal(invoice)
 
 	if err != nil {
 		return err
 	}
 
-	_, pk, _ := nip19.Decode(os.Getenv("NOSTR_NPUB"))
-	_, sk, _ := nip19.Decode(os.Getenv("NOSTR_NSEC"))
+	_, pk, err := nip19.Decode(os.Getenv("NOSTR_NPUB"))
+	if err != nil {
+		return fmt.Errorf("failed to decode NOSTR_NPUB: %w", err)
+	}
+
+	_, sk, err := nip19.Decode(os.Getenv("NOSTR_NSEC"))
+	if err != nil {
+		return fmt.Errorf("failed to decode NOSTR_NSEC: %w", err)
+	}
 
 	hsh := sha256.New()
-	hsh.Write([]byte(js))
+	hsh.Write([]byte(serialized))
 	hash := fmt.Sprintf("%x", hsh.Sum(nil))
 
 	tags := make(nostr.Tags, 0, 26)
@@ -190,16 +197,26 @@ func PublishToNostr(invoice IncomingInvoice) error {
 		tags = append(tags, nostr.Tag{"k", "thesplitkit:event:guid"})
 	}
 
+	pkStr, ok := pk.(string)
+	if !ok {
+		return fmt.Errorf("NOSTR_NPUB did not decode to string")
+	}
+
+	skStr, ok := sk.(string)
+	if !ok {
+		return fmt.Errorf("NOSTR_NSEC did not decode to string")
+	}
+
 	ev := nostr.Event{
-		PubKey:    pk.(string),
+		PubKey:    pkStr,
 		CreatedAt: nostr.Now(),
 		Kind:      nostr.KindApplicationSpecificData,
 		Tags:      tags,
-		Content:   string(js),
+		Content:   string(serialized),
 	}
 
 	// calling Sign sets the event ID field and the event Sig field
-	ev.Sign(sk.(string))
+	ev.Sign(skStr)
 
 	// publish the event to two relays
 	ctx := context.Background()
@@ -208,16 +225,18 @@ func PublishToNostr(invoice IncomingInvoice) error {
 		relay, err := nostr.RelayConnect(ctx, url)
 
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("failed to connect to relay %s: %v", url, err)
 			continue
 		}
 
 		if err := relay.Publish(ctx, ev); err != nil {
-			fmt.Println(err)
+			log.Printf("failed to publish to relay %s: %v", url, err)
+			relay.Close()
 			continue
 		}
 
-		fmt.Printf("published to %s\n", url)
+		log.Printf("published to %s", url)
+		relay.Close()
 	}
 
 	return nil
@@ -227,7 +246,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	wh, err := svix.NewWebhook(os.Getenv("ALBY_WEBHOOK"))
 
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("failed to create webhook verifier: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	payload, err := io.ReadAll(r.Body)
