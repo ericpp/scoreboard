@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -65,6 +66,54 @@ func (i IncomingInvoice) ParseBoostagram() (Boostagram, error) {
 	err = json.Unmarshal(serializedBoostagram, &boostagram)
 	if err != nil {
 		return Boostagram{}, err
+	}
+
+	return boostagram, nil
+}
+
+func extractRSSPaymentURL(comment string) string {
+	// Look for rss::payment:: pattern (e.g., "rss::payment::stream")
+	idx := strings.Index(comment, "rss::payment::")
+	if idx == -1 {
+		return ""
+	}
+
+	// The HTTP link always follows the rss::payment::<something> tag
+	// Extract everything after "rss::payment::" and find the first HTTP/HTTPS URL
+	remaining := comment[idx:]
+	parts := strings.Fields(remaining)
+
+	// Find the first HTTP/HTTPS URL (skip the rss::payment::<something> part)
+	for _, part := range parts {
+		if strings.HasPrefix(part, "http://") || strings.HasPrefix(part, "https://") {
+			return part
+		}
+	}
+	return ""
+}
+
+func fetchRSSPaymentBoostagram(url string) (interface{}, error) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Head(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch URL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	rssPaymentHeader := resp.Header.Get("x-rss-payment")
+	if rssPaymentHeader == "" {
+		return nil, fmt.Errorf("x-rss-payment header not found")
+	}
+
+	var boostagram interface{}
+	if err := json.Unmarshal([]byte(rssPaymentHeader), &boostagram); err != nil {
+		return nil, fmt.Errorf("failed to parse x-rss-payment header: %w", err)
 	}
 
 	return boostagram, nil
@@ -277,6 +326,20 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("payload: %s", payload)
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	// Process RSS payment if present in comment and boostagram is nil
+	if invoice.Boostagram == nil {
+		url := extractRSSPaymentURL(invoice.Comment)
+		if url != "" {
+			log.Printf("found RSS payment URL in comment: %s", url)
+
+			invoice.Boostagram, err := fetchRSSPaymentBoostagram(url)
+			if err != nil {
+				log.Printf("failed to fetch RSS payment boostagram: %v", err)
+				invoice.Boostagram = nil
+			}
+		}
 	}
 
 	if err := SaveToDatabase(invoice); err != nil {
