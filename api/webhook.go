@@ -17,6 +17,8 @@ import (
 	svix "github.com/svix/svix-webhooks/go"
 )
 
+const nostrRelays = []string{"wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"}
+
 type IncomingInvoice struct {
 	Amount       float64     `json:"amount"`
 	Boostagram   interface{} `json:"boostagram"`
@@ -202,7 +204,7 @@ func PublishToNostr(invoice IncomingInvoice) error {
 	// publish the event to two relays
 	ctx := context.Background()
 
-	for _, url := range []string{"wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"} {
+	for _, url := range nostrRelays {
 		relay, err := nostr.RelayConnect(ctx, url)
 
 		if err != nil {
