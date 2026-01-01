@@ -185,7 +185,12 @@ class NostrWatcher {
     const parsedPubkey = this.parsePubkey(nostrPubkey)
     const self = this
 
-    this.nostrPool.subscribeMany(this.nostrRelays, [{authors: [parsedPubkey]}], {
+    const filters = {
+      'authors': [parsedPubkey],
+      'kinds': [30078],
+    }
+
+    this.nostrPool.subscribeMany(this.nostrRelays, filters, {
       async onevent(event) {
         const invoice = JSON.parse(event.content)
 
@@ -234,7 +239,12 @@ class NostrWatcher {
     const self = this
     const parsedActivity = this.parseActivity(nostrActivity)
 
-    this.nostrPool.subscribeMany(this.nostrRelays, [{'#a': [parsedActivity], 'kinds': [9735]}], {
+    const filters = {
+      '#a': [parsedActivity],
+      'kinds': [9735],
+    }
+
+    this.nostrPool.subscribeMany(this.nostrRelays, filters, {
       async onevent(event) {
         // Manage isOld state
         if (isOldTimeout) clearTimeout(isOldTimeout)
