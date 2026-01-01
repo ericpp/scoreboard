@@ -24,7 +24,7 @@ var nostrRelays = []string{"wss://relay.damus.io", "wss://nos.lol", "wss://relay
 
 type IncomingInvoice struct {
 	Amount       float64     `json:"amount"`
-	Boostagram   interface{} `json:"boostagram"`
+	Boostagram   *Boostagram `json:"boostagram"`
 	Comment      string      `json:"comment"`
 	CreatedAt    string      `json:"created_at"`
 	CreationDate float64     `json:"creation_date"`
@@ -32,6 +32,7 @@ type IncomingInvoice struct {
 	Identifier   string      `json:"identifier"`
 	PayerName    string      `json:"payer_name"`
 	Value        float64     `json:"value"`
+	RSSPayment   *RssPayment // parsed from comment
 }
 
 type Boostagram struct {
@@ -52,24 +53,89 @@ type Boostagram struct {
 	RemoteItemGuid string  `json:"remote_item_guid"`
 }
 
-func (i IncomingInvoice) ParseBoostagram() (Boostagram, error) {
-	// Check if boostagram is nil or missing
-	if i.Boostagram == nil {
-		return Boostagram{}, nil
+func ParseInvoiceFromJson(payload []byte) (IncomingInvoice, error) {
+	var invoice IncomingInvoice
+
+	if err := json.Unmarshal(payload, &invoice); err != nil {
+		return IncomingInvoice{}, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
-	serializedBoostagram, err := json.Marshal(i.Boostagram)
-	if err != nil {
-		return Boostagram{}, err
+	// Process RSS payment if present in comment
+	if invoice.RSSPayment == nil {
+		url := extractRSSPaymentURL(invoice.Comment)
+		if url != "" {
+			rssPayment, err := fetchRSSPaymentBoostagram(url)
+			if err != nil {
+				return IncomingInvoice{}, fmt.Errorf("failed to fetch RSS payment boostagram: %w", err)
+			}
+
+			invoice.RSSPayment = &rssPayment
+		}
 	}
 
-	var boostagram Boostagram
-	err = json.Unmarshal(serializedBoostagram, &boostagram)
-	if err != nil {
-		return Boostagram{}, err
+	return invoice, nil
+}
+func (i IncomingInvoice) GetBoostagram() Boostagram {
+	if i.Boostagram != nil {
+		return *i.Boostagram
 	}
 
-	return boostagram, nil
+	// Convert RSS payment to Boostagram
+	if i.RSSPayment != nil {
+		rssPayment := *i.RSSPayment
+		return rssPayment.ParseBoostagram()
+	}
+
+	return Boostagram{}
+}
+
+type RssPayment struct {
+	Action              string  `json:"action"`
+	AppName             string  `json:"app_name"`
+	FeedGuid            string  `json:"feed_guid"`
+	FeedTitle           string  `json:"feed_title"`
+	Group               string  `json:"group"`
+	Id                  string  `json:"id"`
+	ItemGuid            string  `json:"item_guid"`
+	ItemTitle           string  `json:"item_title"`
+	Link                string  `json:"link"`
+	Message             string  `json:"message"`
+	Position            int     `json:"position"`
+	PublisherGuid       string  `json:"publisher_guid"`
+	PublisherTitle      string  `json:"publisher_title"`
+	RecipientAddress    string  `json:"recipient_address"`
+	RemoteFeedGuid      string  `json:"remote_feed_guid"`
+	RemoteItemGuid      string  `json:"remote_item_guid"`
+	RemotePublisherGuid string  `json:"remote_publisher_guid"`
+	SenderId            string  `json:"sender_id"`
+	SenderName          string  `json:"sender_name"`
+	SenderNpub          string  `json:"sender_npub"`
+	Split               int     `json:"split"`
+	Timestamp           string  `json:"timestamp"`
+	ValueMsat           int     `json:"value_msat"`
+	ValueMsatTotal      int     `json:"value_msat_total"`
+	ValueUsd            float64 `json:"value_usd"`
+}
+
+func (r RssPayment) ParseBoostagram() Boostagram {
+	// WHY DID FOUNTAIN MAKE THIS DIFFERENT!?
+	return Boostagram{
+		Action:         strings.ToLower(r.Action),
+		Podcast:        r.FeedTitle,
+		Episode:        r.ItemTitle,
+		AppName:        r.AppName,
+		SenderName:     r.SenderName,
+		Message:        r.Message,
+		ValueMsatTotal: r.ValueMsatTotal,
+		Guid:           r.FeedGuid,
+		EpisodeGuid:    r.ItemGuid,
+		RemoteFeedGuid: r.RemoteFeedGuid,
+		RemoteItemGuid: r.RemoteItemGuid,
+		FeedID:         0,
+		ItemID:         0,
+		BlockGuid:      "",
+		EventGuid:      "",
+	}
 }
 
 func extractRSSPaymentURL(comment string) string {
@@ -93,7 +159,7 @@ func extractRSSPaymentURL(comment string) string {
 	return ""
 }
 
-func fetchRSSPaymentBoostagram(paymentURL string) (interface{}, error) {
+func fetchRSSPaymentBoostagram(paymentURL string) (RssPayment, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -103,27 +169,27 @@ func fetchRSSPaymentBoostagram(paymentURL string) (interface{}, error) {
 
 	resp, err := client.Head(paymentURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch URL: %w", err)
+		return RssPayment{}, fmt.Errorf("failed to fetch URL: %w", err)
 	}
 	defer resp.Body.Close()
 
 	rssPaymentHeader := resp.Header.Get("x-rss-payment")
 	if rssPaymentHeader == "" {
-		return nil, fmt.Errorf("x-rss-payment header not found")
+		return RssPayment{}, fmt.Errorf("x-rss-payment header not found")
 	}
 
 	// URL-decode the header value before parsing as JSON
 	decodedHeader, err := url.QueryUnescape(rssPaymentHeader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode x-rss-payment header: %w", err)
+		return RssPayment{}, fmt.Errorf("failed to decode x-rss-payment header: %w", err)
 	}
 
-	var boostagram interface{}
-	if err := json.Unmarshal([]byte(decodedHeader), &boostagram); err != nil {
-		return nil, fmt.Errorf("failed to parse x-rss-payment header: %w", err)
+	var rssPayment RssPayment
+	if err := json.Unmarshal([]byte(decodedHeader), &rssPayment); err != nil {
+		return RssPayment{}, fmt.Errorf("failed to parse x-rss-payment header: %w", err)
 	}
 
-	return boostagram, nil
+	return rssPayment, nil
 }
 
 func SaveToDatabase(invoice IncomingInvoice) error {
@@ -149,12 +215,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 		serializedBoostagram = []byte("null")
 	}
 
-	boostagram, err := invoice.ParseBoostagram()
-	if err != nil {
-		log.Printf("failed to parse boostagram for invoice %s: %v", invoice.Identifier, err)
-		boostagram = Boostagram{}
-	}
-
+	boostagram := invoice.GetBoostagram()
 	insertSql :=
 		`INSERT INTO invoices
         (amount, boostagram, comment, created_at, creation_date, description, identifier, payer_name, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action, event_guid)
@@ -218,12 +279,7 @@ func PublishToNostr(invoice IncomingInvoice) error {
 	tags := make(nostr.Tags, 0, 26)
 	tags = append(tags, nostr.Tag{"d", hash})
 
-	boostagram, err := invoice.ParseBoostagram()
-	if err != nil {
-		log.Printf("failed to parse boostagram for nostr publishing: %v", err)
-		boostagram = Boostagram{}
-	}
-
+	boostagram := invoice.GetBoostagram()
 	if boostagram.Guid != "" {
 		tags = append(tags, nostr.Tag{"i", "podcast:guid:" + boostagram.Guid})
 		tags = append(tags, nostr.Tag{"k", "podcast:guid"})
@@ -326,27 +382,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("incoming webhook %s", payload)
 
-	var invoice IncomingInvoice
-
-	if err := json.Unmarshal(payload, &invoice); err != nil {
-		log.Printf("failed to unmarshal payload: %v", err)
+	invoice, err := ParseInvoiceFromJson(payload)
+	if err != nil {
+		log.Printf("failed to parse invoice from json: %v", err)
 		log.Printf("payload: %s", payload)
 		w.WriteHeader(http.StatusBadRequest)
 		return
-	}
-
-	// Process RSS payment if present in comment and boostagram is nil
-	if invoice.Boostagram == nil {
-		url := extractRSSPaymentURL(invoice.Comment)
-		if url != "" {
-			log.Printf("found RSS payment URL in comment: %s", url)
-
-			invoice.Boostagram, err = fetchRSSPaymentBoostagram(url)
-			if err != nil {
-				log.Printf("failed to fetch RSS payment boostagram: %v", err)
-				invoice.Boostagram = nil
-			}
-		}
 	}
 
 	if err := SaveToDatabase(invoice); err != nil {
