@@ -18,7 +18,7 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
-var nostrRelays = []string{"wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net", "wss://nos.social"}
+var nostrRelays = []string{"wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net", "wss://relay,nos.social"}
 
 type HelipadWebhook struct {
 	Index          int64        `json:"index"`

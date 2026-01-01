@@ -1,6 +1,6 @@
 class PaymentTracker {
   constructor(config = {}) {
-    this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol"]
+    this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net", "wss://relay.nos.social"]
     this.nostrBoostPkey = config.nostrBoostPkey || null
     this.nostrZapEvent = config.nostrZapEvent || null
     this.loadBoosts = config.loadBoosts ?? true
