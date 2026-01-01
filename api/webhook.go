@@ -29,6 +29,44 @@ type IncomingInvoice struct {
 	Value        float64     `json:"value"`
 }
 
+type Boostagram struct {
+	Action         string  `json:"action"`
+	Podcast        string  `json:"podcast"`
+	Episode        string  `json:"episode"`
+	AppName        string  `json:"app_name"`
+	SenderName     string  `json:"sender_name"`
+	Message        string  `json:"message"`
+	ValueMsatTotal int     `json:"value_msat_total"`
+	FeedID         float64 `json:"feedID"`
+	ItemID         float64 `json:"itemID"`
+	Guid           string  `json:"guid"`
+	EpisodeGuid    string  `json:"episode_guid"`
+	BlockGuid      string  `json:"blockGuid"` // splitkit
+	EventGuid      string  `json:"eventGuid"` // splitkit
+	RemoteFeedGuid string  `json:"remote_feed_guid"`
+	RemoteItemGuid string  `json:"remote_item_guid"`
+}
+
+func (i IncomingInvoice) ParseBoostagram() (Boostagram, error) {
+	// Check if boostagram is nil or missing
+	if i.Boostagram == nil {
+		return Boostagram{}, nil
+	}
+
+	serializedBoostagram, err := json.Marshal(i.Boostagram)
+	if err != nil {
+		return Boostagram{}, err
+	}
+
+	var boostagram Boostagram
+	err = json.Unmarshal(serializedBoostagram, &boostagram)
+	if err != nil {
+		return Boostagram{}, err
+	}
+
+	return boostagram, nil
+}
+
 func SaveToDatabase(invoice IncomingInvoice) error {
 	// open database
 	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
@@ -46,76 +84,16 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 
 	log.Printf("inserting %s", invoice.Identifier)
 
-	boostagram, err := json.Marshal(invoice.Boostagram)
-
+	serializedBoostagram, err := json.Marshal(invoice.Boostagram)
 	if err != nil {
-		return err
+		log.Printf("failed to serialize boostagram for invoice %s: %v", invoice.Identifier, err)
+		serializedBoostagram = []byte("null")
 	}
 
-	var tlv map[string]interface{}
-
-	if invoice.Boostagram != nil {
-		tlv = invoice.Boostagram.(map[string]interface{})
-	}
-
-	action := ""
-	if val, ok := tlv["action"].(string); ok {
-		action = val
-	}
-
-	podcast := ""
-	if val, ok := tlv["podcast"].(string); ok {
-		podcast = val
-	}
-
-	episode := ""
-	if val, ok := tlv["episode"].(string); ok {
-		episode = val
-	}
-
-	app_name := ""
-	if val, ok := tlv["app_name"].(string); ok {
-		app_name = val
-	}
-
-	sender_name := ""
-	if val, ok := tlv["sender_name"].(string); ok {
-		sender_name = val
-	}
-
-	message := ""
-	if val, ok := tlv["message"].(string); ok {
-		message = val
-	}
-
-	var value_msat_total float64 = 0
-	if val, ok := tlv["value_msat_total"].(float64); ok {
-		value_msat_total = val
-	}
-
-	var feedID *float64 = nil
-	if val, ok := tlv["feedID"].(float64); ok {
-		feedID = &val
-	}
-
-	var itemID *float64 = nil
-	if val, ok := tlv["itemID"].(float64); ok {
-		itemID = &val
-	}
-
-	guid := ""
-	if val, ok := tlv["guid"].(string); ok {
-		guid = val
-	}
-
-	episode_guid := ""
-	if val, ok := tlv["episode_guid"].(string); ok {
-		episode_guid = val
-	}
-
-	event_guid := ""
-	if val, ok := tlv["eventGuid"].(string); ok {
-		event_guid = val
+	boostagram, err := invoice.ParseBoostagram()
+	if err != nil {
+		log.Printf("failed to parse boostagram for invoice %s: %v", invoice.Identifier, err)
+		boostagram = Boostagram{}
 	}
 
 	insertSql :=
@@ -128,7 +106,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 	_, err = db.Exec(
 		insertSql,
 		invoice.Amount,
-		boostagram,
+		serializedBoostagram,
 		invoice.Comment,
 		invoice.CreatedAt,
 		invoice.CreationDate,
@@ -136,18 +114,18 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 		invoice.Identifier,
 		invoice.PayerName,
 		invoice.Value,
-		podcast,
-		episode,
-		app_name,
-		sender_name,
-		message,
-		value_msat_total,
-		feedID,
-		itemID,
-		guid,
-		episode_guid,
-		action,
-		event_guid,
+		boostagram.Podcast,
+		boostagram.Episode,
+		boostagram.AppName,
+		boostagram.SenderName,
+		boostagram.Message,
+		boostagram.ValueMsatTotal,
+		boostagram.FeedID,
+		boostagram.ItemID,
+		boostagram.Guid,
+		boostagram.EpisodeGuid,
+		boostagram.Action,
+		boostagram.EventGuid,
 	)
 
 	if err != nil {
@@ -173,6 +151,42 @@ func PublishToNostr(invoice IncomingInvoice) error {
 
 	tags := make(nostr.Tags, 0, 26)
 	tags = append(tags, nostr.Tag{"d", hash})
+
+	boostagram, err := invoice.ParseBoostagram()
+	if err != nil {
+		log.Printf("failed to parse boostagram for nostr publishing: %v", err)
+		boostagram = Boostagram{}
+	}
+
+	if boostagram.Guid != "" {
+		tags = append(tags, nostr.Tag{"i", "podcast:guid:" + boostagram.Guid})
+		tags = append(tags, nostr.Tag{"k", "podcast:guid"})
+	}
+
+	if boostagram.EpisodeGuid != "" {
+		tags = append(tags, nostr.Tag{"i", "podcast:item:guid:" + boostagram.EpisodeGuid})
+		tags = append(tags, nostr.Tag{"k", "podcast:item:guid"})
+	}
+
+	if boostagram.RemoteFeedGuid != "" {
+		tags = append(tags, nostr.Tag{"i", "podcast:remote:guid:" + boostagram.RemoteFeedGuid})
+		tags = append(tags, nostr.Tag{"k", "podcast:remote:guid"})
+	}
+
+	if boostagram.RemoteItemGuid != "" {
+		tags = append(tags, nostr.Tag{"i", "podcast:remote:item:guid:" + boostagram.RemoteItemGuid})
+		tags = append(tags, nostr.Tag{"k", "podcast:remote:item:guid"})
+	}
+
+	if boostagram.BlockGuid != "" {
+		tags = append(tags, nostr.Tag{"i", "thesplitkit:block:guid:" + boostagram.BlockGuid})
+		tags = append(tags, nostr.Tag{"k", "thesplitkit:block:guid"})
+	}
+
+	if boostagram.EventGuid != "" {
+		tags = append(tags, nostr.Tag{"i", "thesplitkit:event:guid:" + boostagram.EventGuid})
+		tags = append(tags, nostr.Tag{"k", "thesplitkit:event:guid"})
+	}
 
 	ev := nostr.Event{
 		PubKey:    pk.(string),
