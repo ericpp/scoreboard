@@ -334,7 +334,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		if url != "" {
 			log.Printf("found RSS payment URL in comment: %s", url)
 
-			invoice.Boostagram, err := fetchRSSPaymentBoostagram(url)
+			invoice.Boostagram, err = fetchRSSPaymentBoostagram(url)
 			if err != nil {
 				log.Printf("failed to fetch RSS payment boostagram: %v", err)
 				invoice.Boostagram = nil
