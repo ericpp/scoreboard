@@ -247,47 +247,24 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("incoming webhook %s", payload)
 
-	var transaction map[string]interface{}
+	var invoice IncomingInvoice
 
-	if err := json.Unmarshal([]byte(payload), &transaction); err != nil {
-		log.Print(err)
-		log.Print(payload)
-		os.Exit(1)
-	}
-
-	comment := ""
-	if val, ok := transaction["comment"].(string); ok {
-		comment = val
-	}
-
-	description := ""
-	if val, ok := transaction["description"].(string); ok {
-		description = val
-	}
-
-	payer_name := ""
-	if val, ok := transaction["payer_name"].(string); ok {
-		payer_name = val
-	}
-
-	invoice := IncomingInvoice{
-		Amount:       transaction["amount"].(float64),
-		Boostagram:   transaction["boostagram"],
-		Comment:      comment,
-		CreatedAt:    transaction["created_at"].(string),
-		CreationDate: transaction["creation_date"].(float64),
-		Description:  description,
-		Identifier:   transaction["identifier"].(string),
-		PayerName:    payer_name,
-		Value:        transaction["value"].(float64),
+	if err := json.Unmarshal(payload, &invoice); err != nil {
+		log.Printf("failed to unmarshal payload: %v", err)
+		log.Printf("payload: %s", payload)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	if err := SaveToDatabase(invoice); err != nil {
-		log.Fatal(err)
+		log.Printf("failed to save to database: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	if err := PublishToNostr(invoice); err != nil {
-		log.Fatal(err)
+		log.Printf("failed to publish to nostr: %v", err)
+		// Don't fail the request if nostr publishing fails, as the data is already saved
 	}
 
 	// Do something with the message...
