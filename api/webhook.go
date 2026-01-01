@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -92,7 +93,7 @@ func extractRSSPaymentURL(comment string) string {
 	return ""
 }
 
-func fetchRSSPaymentBoostagram(url string) (interface{}, error) {
+func fetchRSSPaymentBoostagram(paymentURL string) (interface{}, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -100,7 +101,7 @@ func fetchRSSPaymentBoostagram(url string) (interface{}, error) {
 		},
 	}
 
-	resp, err := client.Head(url)
+	resp, err := client.Head(paymentURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
