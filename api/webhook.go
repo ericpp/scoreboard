@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/nbd-wtf/go-nostr"
@@ -218,8 +219,9 @@ func PublishToNostr(invoice IncomingInvoice) error {
 	// calling Sign sets the event ID field and the event Sig field
 	ev.Sign(skStr)
 
-	// publish the event to two relays
-	ctx := context.Background()
+	// publish the event to relays with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	for _, url := range nostrRelays {
 		relay, err := nostr.RelayConnect(ctx, url)
