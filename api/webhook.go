@@ -36,21 +36,21 @@ type IncomingInvoice struct {
 }
 
 type Boostagram struct {
-	Action         string  `json:"action"`
-	Podcast        string  `json:"podcast"`
-	Episode        string  `json:"episode"`
-	AppName        string  `json:"app_name"`
-	SenderName     string  `json:"sender_name"`
-	Message        string  `json:"message"`
-	ValueMsatTotal int     `json:"value_msat_total"`
-	FeedID         float64 `json:"feedID"`
-	ItemID         float64 `json:"itemID"`
-	Guid           string  `json:"guid"`
-	EpisodeGuid    string  `json:"episode_guid"`
-	BlockGuid      string  `json:"blockGuid"` // splitkit
-	EventGuid      string  `json:"eventGuid"` // splitkit
-	RemoteFeedGuid string  `json:"remote_feed_guid"`
-	RemoteItemGuid string  `json:"remote_item_guid"`
+	Action         string   `json:"action"`
+	Podcast        string   `json:"podcast"`
+	Episode        string   `json:"episode"`
+	AppName        string   `json:"app_name"`
+	SenderName     string   `json:"sender_name"`
+	Message        string   `json:"message"`
+	ValueMsatTotal int      `json:"value_msat_total"`
+	FeedID         *float64 `json:"feedID"`
+	ItemID         *float64 `json:"itemID"`
+	Guid           string   `json:"guid"`
+	EpisodeGuid    string   `json:"episode_guid"`
+	BlockGuid      string   `json:"blockGuid"` // splitkit
+	EventGuid      string   `json:"eventGuid"` // splitkit
+	RemoteFeedGuid string   `json:"remote_feed_guid"`
+	RemoteItemGuid string   `json:"remote_item_guid"`
 }
 
 func ParseInvoiceFromJson(payload []byte) (IncomingInvoice, error) {
@@ -143,8 +143,8 @@ func (r RssPayment) ParseBoostagram() Boostagram {
 		EpisodeGuid:    r.ItemGuid,
 		RemoteFeedGuid: r.RemoteFeedGuid,
 		RemoteItemGuid: r.RemoteItemGuid,
-		FeedID:         0,
-		ItemID:         0,
+		FeedID:         nil,
+		ItemID:         nil,
 		BlockGuid:      "",
 		EventGuid:      "",
 	}
