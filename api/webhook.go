@@ -89,6 +89,18 @@ func (i IncomingInvoice) GetBoostagram() Boostagram {
 	return Boostagram{}
 }
 
+func (i IncomingInvoice) GetSerializedMetadata() ([]byte, error) {
+	if i.Boostagram != nil {
+		return json.Marshal(i.Boostagram)
+	}
+
+	if i.RSSPayment != nil {
+		return json.Marshal(i.RSSPayment)
+	}
+
+	return []byte{}, nil
+}
+
 type RssPayment struct {
 	Action              string  `json:"action"`
 	AppName             string  `json:"app_name"`
@@ -209,10 +221,9 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 
 	log.Printf("inserting %s", invoice.Identifier)
 
-	serializedBoostagram, err := json.Marshal(invoice.Boostagram)
+	serializedMetadata, err := invoice.GetSerializedMetadata()
 	if err != nil {
 		log.Printf("failed to serialize boostagram for invoice %s: %v", invoice.Identifier, err)
-		serializedBoostagram = []byte("null")
 	}
 
 	boostagram := invoice.GetBoostagram()
@@ -226,7 +237,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 	_, err = db.Exec(
 		insertSql,
 		invoice.Amount,
-		serializedBoostagram,
+		serializedMetadata,
 		invoice.Comment,
 		invoice.CreatedAt,
 		invoice.CreationDate,
@@ -256,7 +267,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 }
 
 func PublishToNostr(invoice IncomingInvoice) error {
-	serialized, err := json.Marshal(invoice)
+	serializedMetadata, err := invoice.GetSerializedMetadata()
 
 	if err != nil {
 		return err
@@ -273,7 +284,7 @@ func PublishToNostr(invoice IncomingInvoice) error {
 	}
 
 	hsh := sha256.New()
-	hsh.Write([]byte(serialized))
+	hsh.Write([]byte(serializedMetadata))
 	hash := fmt.Sprintf("%x", hsh.Sum(nil))
 
 	tags := make(nostr.Tags, 0, 26)
@@ -325,7 +336,7 @@ func PublishToNostr(invoice IncomingInvoice) error {
 		CreatedAt: nostr.Now(),
 		Kind:      nostr.KindApplicationSpecificData,
 		Tags:      tags,
-		Content:   string(serialized),
+		Content:   string(serializedMetadata),
 	}
 
 	// calling Sign sets the event ID field and the event Sig field
