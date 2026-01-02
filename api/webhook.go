@@ -95,15 +95,19 @@ func (i IncomingInvoice) GetBoostagram() Boostagram {
 }
 
 func (i IncomingInvoice) GetSerializedMetadata() ([]byte, error) {
+	var metadata interface{}
+
 	if i.Boostagram != nil {
-		return json.Marshal(i.Boostagram)
+		metadata = i.Boostagram
+	} else if i.RSSPayment != nil {
+		metadata = i.RSSPayment
 	}
 
-	if i.RSSPayment != nil {
-		return json.Marshal(i.RSSPayment)
+	if metadata != nil {
+		return json.Marshal(metadata)
 	}
 
-	return []byte{}, nil
+	return []byte("null"), nil
 }
 
 type RssPayment struct {
