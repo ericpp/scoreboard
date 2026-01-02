@@ -60,21 +60,26 @@ func ParseInvoiceFromJson(payload []byte) (IncomingInvoice, error) {
 		return IncomingInvoice{}, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
+	return invoice, nil
+}
+
+func FetchRSSPaymentIfNeeded(invoice *IncomingInvoice) error {
 	// Process RSS payment if present in comment
 	if invoice.RSSPayment == nil {
 		url := extractRSSPaymentURL(invoice.Comment)
 		if url != "" {
 			rssPayment, err := fetchRSSPaymentBoostagram(url)
 			if err != nil {
-				return IncomingInvoice{}, fmt.Errorf("failed to fetch RSS payment boostagram: %w", err)
+				return fmt.Errorf("failed to fetch RSS payment boostagram: %w", err)
 			}
 
 			invoice.RSSPayment = &rssPayment
 		}
 	}
 
-	return invoice, nil
+	return nil
 }
+
 func (i IncomingInvoice) GetBoostagram() Boostagram {
 	if i.Boostagram != nil {
 		return *i.Boostagram
@@ -266,6 +271,76 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 	return nil
 }
 
+func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
+	if invoice.RSSPayment == nil {
+		return nil
+	}
+
+	// open database
+	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	if err != nil {
+		return err
+	}
+
+	// close database
+	defer db.Close()
+
+	// check db
+	if err = db.Ping(); err != nil {
+		return err
+	}
+
+	log.Printf("updating %s with RSS payment info", invoice.Identifier)
+
+	serializedMetadata, err := invoice.GetSerializedMetadata()
+	if err != nil {
+		log.Printf("failed to serialize boostagram for invoice %s: %v", invoice.Identifier, err)
+		return err
+	}
+
+	boostagram := invoice.GetBoostagram()
+	updateSql :=
+		`UPDATE invoices SET
+        boostagram = $1,
+        podcast = $2,
+        episode = $3,
+        app_name = $4,
+        sender_name = $5,
+        message = $6,
+        value_msat_total = $7,
+        feed_id = $8,
+        item_id = $9,
+        guid = $10,
+        episode_guid = $11,
+        action = $12,
+        event_guid = $13
+    WHERE identifier = $14`
+
+	_, err = db.Exec(
+		updateSql,
+		serializedMetadata,
+		boostagram.Podcast,
+		boostagram.Episode,
+		boostagram.AppName,
+		boostagram.SenderName,
+		boostagram.Message,
+		boostagram.ValueMsatTotal,
+		boostagram.FeedID,
+		boostagram.ItemID,
+		boostagram.Guid,
+		boostagram.EpisodeGuid,
+		boostagram.Action,
+		boostagram.EventGuid,
+		invoice.Identifier,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func PublishToNostr(invoice IncomingInvoice) error {
 	serializedMetadata, err := invoice.GetSerializedMetadata()
 
@@ -405,6 +480,20 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("failed to save to database: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	if err := FetchRSSPaymentIfNeeded(&invoice); err != nil {
+		log.Printf("failed to fetch RSS payment: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if invoice.RSSPayment != nil {
+		if err := UpdateDatabaseWithRSSPayment(invoice); err != nil {
+			log.Printf("failed to update database with RSS payment: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if err := PublishToNostr(invoice); err != nil {
