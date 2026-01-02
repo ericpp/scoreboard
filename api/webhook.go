@@ -122,7 +122,7 @@ type RssPayment struct {
 	SenderId            string  `json:"sender_id"`
 	SenderName          string  `json:"sender_name"`
 	SenderNpub          string  `json:"sender_npub"`
-	Split               int     `json:"split"`
+	Split               float64 `json:"split"`
 	Timestamp           string  `json:"timestamp"`
 	ValueMsat           int     `json:"value_msat"`
 	ValueMsatTotal      int     `json:"value_msat_total"`
