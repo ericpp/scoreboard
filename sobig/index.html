@@ -67,6 +67,12 @@
     margin-bottom: 0.5rem;
   }
 
+  #satCounter {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: red;
+  }
+
   .board-table {
     width: 100%;
     border-spacing: 0;
@@ -105,7 +111,8 @@
   <img src="bg-top.png" class="board-bg-image" alt="Board top">
 
   <div class="board-content">
-    <div id="latestMessage">FRESH BOOSTAGRAMS SERVED HERE</div>
+    <section id="latestMessage">FRESH BOOSTAGRAMS SERVED HERE</section>
+    <section id="satCounter"></section>
 
     <section id="boostsBoard">
       <h1>* * * TOP BOOSTERS * * *</h1>
@@ -179,22 +186,24 @@ function updateLatestBoost(boost) {
     div.textContent = m;
     latestEl.appendChild(div);
   });
+}
 
-  const satsDiv = document.createElement('div');
-  satsDiv.className = 'sats';
-  satsDiv.textContent = `${sats.toLocaleString()} SATS`;
-  latestEl.appendChild(satsDiv);
+function updateSatCounter(sats) {
+  const satCounterEl = document.querySelector('#satCounter');
+  satCounterEl.textContent = `${sats.toLocaleString()} SATS`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   const topBoosters = createBoard('boostsBoard', 'sender_name', CONFIG.scoreSlots);
   const topApps = createBoard('appsBoard', 'app_name', CONFIG.appSlots);
   const latestBoost = new LatestPaymentRaw(updateLatestBoost);
+  const satCounter = new SatCounter(updateSatCounter);
 
   function addBoost(payment, old) {
     topBoosters.add(payment, old);
     topApps.add(payment, old);
     latestBoost.add(payment, old);
+    satCounter.add(payment, old);
   }
 
   const app = new PaymentTracker();
