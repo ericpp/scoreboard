@@ -1,0 +1,270 @@
+<html>
+<head>
+<title>Alerts</title>
+
+<link href="../alerts.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../alerts.js"></script>
+
+<style>
+@font-face {
+    font-family: 'VCR OSD Mono'; /* Name of the font */
+    src: url('VCR_OSD_MONO_1.001.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+  font-family: 'VCR OSD Mono';
+  font-size: 2.5rem;
+  /* font-weight: 700; */
+  background-color: #050;
+  color: #fff;
+  text-shadow: 3px 6px 2px #000;
+  line-height: 1.2;
+}
+
+.messageFlex {
+  text-shadow: 3px 6px 2px #000;
+  height: auto;
+  align-items: end;
+}
+.message {
+  position: static;
+}
+/* 
+.bleh {
+box-shadow: rgb(85, 91, 255) 0px 0px 0px 3px,
+ rgb(31, 193, 27) 0px 0px 0px 6px,
+ rgb(255, 217, 19) 0px 0px 0px 9px,
+ rgb(255, 156, 85) 0px 0px 0px 12px,
+ rgb(255, 85, 85) 0px 0px 0px 15px;
+} */
+
+/* style="box-shadow: -5px 5px black, -10px 10px white" */
+
+</style>
+</head>
+
+<body>
+
+  <style>
+    .overlay {
+        --border-style: 5px solid white;
+        --border-space: 20px;
+
+        position: absolute;
+        /* width: 100%;
+        height: 100%; */
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    }
+
+    .overlay-helper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .overlay-element {
+        padding: 20px;
+        width: 150px;
+        height: 100px;
+        position: absolute;
+    }
+
+    .overlay-text {
+        font-size: 1.75em;
+        color: white;
+        font-family: monospace;
+    }
+
+    .overlay .top-left {
+        border-left: var(--border-style);
+        border-top: var(--border-style);
+        top: var(--border-space);
+        left: var(--border-space);
+        text-align: left;
+        filter: drop-shadow(6px 6px 2px rgba(0, 0, 0, 1.0))
+    }
+
+    .overlay .top-right {
+        border-right: var(--border-style);
+        border-top: var(--border-style);
+        top: var(--border-space);
+        right: var(--border-space);
+        text-align: right;
+        filter: drop-shadow(6px 6px 2px rgba(0, 0, 0, 1.0))
+
+    }
+
+    .overlay .bottom-left {
+        border-left: var(--border-style);
+        border-bottom: var(--border-style);
+        bottom: var(--border-space);
+        left: var(--border-space);
+        text-align: left;
+        filter: drop-shadow(6px 6px 2px rgba(0, 0, 0, 1.0))
+    }
+
+    .overlay .bottom-right {
+        border-right: var(--border-style);
+        border-bottom: var(--border-style);
+        bottom: var(--border-space);
+        right: var(--border-space);
+        text-align: right;
+        filter: drop-shadow(6px 6px 2px rgba(0, 0, 0, 1.0))
+    }
+
+    #overlay-bottom-left-text {
+        position: absolute;
+        bottom: var(--border-space);
+        left: var(--border-space);
+    }
+
+    #overlay-bottom-right-text {
+        position: absolute;
+        bottom: var(--border-space);
+        right: var(--border-space);
+    }
+
+    #boost-date {
+      opacity: 0;
+    }
+
+    #boost-date.show {
+      opacity: 1;
+    }
+
+    #v4v-info {
+      text-align: right;
+      opacity: 0;
+    }
+
+    #v4v-info.show {
+      opacity: 1;
+    }
+  </style>
+
+    <div class="overlay">
+      <div class="overlay-helper">
+        <div class="overlay-element top-left">
+          <span id="overlay-top-left-text" class="overlay-text">
+          </span>
+        </div>
+        <div class="overlay-element top-right">
+          <span id="overlay-top-right-text" class="overlay-text">
+          </span>
+        </div>
+        <div class="overlay-element bottom-left">
+          <span id="overlay-bottom-left-text" class="overlay-text">
+          </span>
+        </div>
+        <div class="overlay-element bottom-right">
+          <span id="overlay-bottom-right-text" class="overlay-text">
+          </span>
+        </div>
+      </div>
+    </div>
+
+  <div style="display: flex; height: 100%; width: 100%; flex-direction: column;">
+  <div style="display: flex; justify-content: center; padding: 30px; height: 10%;">
+    <div id="boost-date" class="fade">
+      Boost<br>
+      7:30:52pm<br>
+      01/09/2026
+    </div>
+
+    <div style="flex: 1 1;"></div>
+
+    <div id="v4v-info" class="fade">
+      v4v<br>
+      sobigasif.com
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: center; padding: 30px; flex-grow: 1; align-items: end;">
+
+      <div id="alert" class="alert fade">
+        <div class="messageFlex">
+          <img class="background" src="spacer.png">
+          <div class="message fade" data-timeshow="1">
+            <div class="picture"></div>
+            <div class="messageText" style="flex: 1 1"></div>
+          </div>
+        </div>
+      </div> 
+  </div>
+
+
+</div>
+
+<script>
+  (async () => {  
+    const events = {
+      messageRender: (payment) => [],
+  
+      messageShow: (payment) => {
+        const message = (payment.message) ? ` "${payment.message}"` : '';
+        const boost = (payment.type == 'boost') ? 'boosted' : 'zapped';
+        const text = `${payment.sender_name} ${boost} ${payment.sats.toLocaleString()} sats via ${payment.app_name}${message}`;
+        document.querySelector(".messageText").innerText = text;
+
+        const boostDate = document.querySelector("#boost-date");
+        boostDate.classList.add("show");
+        
+        // Format date to match default formatting: "7:30:52pm" and "01/09/2026"
+        const date = new Date(payment.creation_date * 1000);
+        const hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        const hours12 = hours % 12 || 12;
+        const timeStr = `${hours12}:${minutes}:${seconds}${ampm}`;
+        
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const dateStr = `${month}/${day}/${year}`;
+        
+        boostDate.innerHTML = `Boost<br>${timeStr}<br>${dateStr}`;
+
+        const v4vInfo = document.querySelector("#v4v-info");
+        v4vInfo.classList.add("show");
+      },
+
+      messageHide: (payment) => {
+        const boostDate = document.querySelector("#boost-date");
+        boostDate.classList.remove("show");
+
+        const v4vInfo = document.querySelector("#v4v-info");
+        v4vInfo.classList.remove("show");
+      },
+    }
+  
+    const filters = {
+      podcasts: ["Satellite Spotlight"],
+      // episodeGuids: ["65137f9b-62d6-4247-a17b-dff53926a1a9", "01dabf27-45ab-43cc-b4b6-b2897ecf20e5"],
+      eventGuids: ["1e34e11b-f536-4280-b068-7dd1a9399b12"],
+      after: "2024-04-20 00:00:00",
+    }
+  
+    startAlerts({
+      slots: [{
+        id: "#alert",
+        events,
+      }],
+      loadZaps: false,
+      loadBoosts: false,
+      ...filters,
+    })
+  })()
+  </script>
+
+</body>
+</html>
