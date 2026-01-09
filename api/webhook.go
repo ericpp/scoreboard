@@ -35,6 +35,18 @@ type IncomingInvoice struct {
 	RSSPayment   *RssPayment // parsed from comment
 }
 
+type NostrRecord struct {
+	Amount       float64     `json:"amount"`
+	Boostagram   *Boostagram `json:"boostagram"`
+	Comment      string      `json:"comment"`
+	CreatedAt    string      `json:"created_at"`
+	CreationDate float64     `json:"creation_date"`
+	Description  string      `json:"description"`
+	Identifier   string      `json:"identifier"`
+	PayerName    string      `json:"payer_name"`
+	Value        float64     `json:"value"`
+}
+
 type Boostagram struct {
 	Action         string   `json:"action"`
 	Podcast        string   `json:"podcast"`
@@ -108,6 +120,22 @@ func (i IncomingInvoice) GetSerializedMetadata() ([]byte, error) {
 	}
 
 	return []byte("null"), nil
+}
+
+func (i IncomingInvoice) GetNostrRecord() NostrRecord {
+	boostagram := i.GetBoostagram()
+
+	return NostrRecord {
+		Amount: i.Amount,
+		Boostagram: &boostagram,
+		Comment: i.Comment,
+		CreatedAt: i.CreatedAt,
+		CreationDate: i.CreationDate,
+		Description: i.Description,
+		Identifier: i.Identifier,
+		PayerName: i.PayerName,
+		Value: i.Value,
+	}
 }
 
 type RssPayment struct {
@@ -346,10 +374,11 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
 }
 
 func PublishToNostr(invoice IncomingInvoice) error {
-	serializedMetadata, err := invoice.GetSerializedMetadata()
+	nostrRecord := invoice.GetNostrRecord()
+	serializedMetadata, err := json.Marshal(nostrRecord)
 
-	if err != nil {
-		return err
+	if err != {
+		return fmt.Errorf("failed to serialize nostr record: %w", err)
 	}
 
 	_, pk, err := nip19.Decode(os.Getenv("NOSTR_NPUB"))
