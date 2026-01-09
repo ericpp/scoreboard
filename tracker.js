@@ -297,7 +297,7 @@ class NostrWatcher {
           const invoice = JSON.parse(event.content)
           updateOldState()
 
-          if (!invoice.boostagram) return
+          if (!invoice || !invoice.boostagram) return
 
           const boost = invoice.boostagram
           const remoteInfo = await addRemoteInfo(boost)
