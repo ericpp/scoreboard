@@ -377,7 +377,7 @@ func PublishToNostr(invoice IncomingInvoice) error {
 	nostrRecord := invoice.GetNostrRecord()
 	serializedMetadata, err := json.Marshal(nostrRecord)
 
-	if err != {
+	if err != nil {
 		return fmt.Errorf("failed to serialize nostr record: %w", err)
 	}
 
