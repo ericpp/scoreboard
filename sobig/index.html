@@ -210,11 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
 
   app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce");
-  app.setFilter('after', params.get("after") || "2025-01-11 00:00:00 -0500");
+  app.setFilter('after', params.get("after") || "2026-01-08 00:00:00 -0500");
   app.setFilter('before', params.get("before"));
-  app.setFilter('podcasts', ["Satellite Spotlight"]);
-  app.setFilter('episodeGuids', ["d141d070-7ca4-4792-86a0-a32740111335"]);
-  app.setFilter('eventGuids', ["1e34e11b-f536-4280-b068-7dd1a9399b12"]);
+  app.setFilter('podcasts', ["As If: Lit At Boost Beach"]);
+  app.setFilter('episodeGuids', ["c6fa7516-3be6-43a2-b5cf-73484baf49dd"]);
+  app.setFilter('eventGuids', ["58eb81f8-caeb-4c77-a326-36e406207fe0"]);
   app.setListener(addBoost);
   app.start();
 
