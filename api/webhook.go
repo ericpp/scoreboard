@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -161,8 +162,8 @@ type RssPayment struct {
 	SenderNpub          string  `json:"sender_npub"`
 	Split               float64 `json:"split"`
 	Timestamp           string  `json:"timestamp"`
-	ValueMsat           int     `json:"value_msat"`
-	ValueMsatTotal      int     `json:"value_msat_total"`
+	ValueMsat           float64 `json:"value_msat"`
+	ValueMsatTotal      float64 `json:"value_msat_total"`
 	ValueUsd            float64 `json:"value_usd"`
 }
 
@@ -175,7 +176,7 @@ func (r RssPayment) ParseBoostagram() Boostagram {
 		AppName:        r.AppName,
 		SenderName:     r.SenderName,
 		Message:        r.Message,
-		ValueMsatTotal: r.ValueMsatTotal,
+		ValueMsatTotal: int(math.Floor(r.ValueMsatTotal)),
 		Guid:           r.FeedGuid,
 		EpisodeGuid:    r.ItemGuid,
 		RemoteFeedGuid: r.RemoteFeedGuid,
