@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SXWORLDWIDE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../board.js"></script>
+
+<style>
+  :root {
+    --color-primary: transparent;
+    --color-text: #000;
+    --color-text-shadow: #ccc;
+    --color-sats: #f00;
+    --color-sats-shadow: #c00;
+  }
+
+  @font-face {
+    font-family: 'Oswald';
+    src: url('oswald/Oswald-Bold.ttf') format('truetype');
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: min(2.2vh, 20px);
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Oswald', sans-serif;
+    color: var(--color-text);
+    background-color: var(--color-primary);
+  }
+
+  h1 {
+    font-size: 1rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  .board {
+    position: absolute;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .board-bg-image {
+    width: 100%;
+  }
+
+  .board-content {
+    padding: 0 20px;
+    background: url('bg-middle.png') 100% / 100%;
+    flex: 1;
+  }
+
+  #latestMessage {
+    text-align: center;
+    min-height: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  #satCounter {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: red;
+  }
+
+  .board-table {
+    width: 100%;
+    border-spacing: 0;
+  }
+
+  .board-table td {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: bold;
+  }
+
+  .board-table td:first-child {
+    text-align: left;
+    width: 280px;
+  }
+
+  .board-table td:last-child {
+    text-align: right;
+  }
+
+  .name {
+    color: var(--color-text);
+    text-shadow: 0 0 1px var(--color-text-shadow);
+  }
+
+  .sats {
+    color: var(--color-sats);
+    text-shadow: 0 0 1px var(--color-sats-shadow);
+  }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <img src="bg-top.png" class="board-bg-image" alt="Board top">
+
+  <div class="board-content">
+    <section id="latestMessage">FRESH BOOSTAGRAMS SERVED HERE</section>
+    <section id="satCounter"></section>
+
+    <section id="boostsBoard">
+      <h1>* * * TOP BOOSTERS * * *</h1>
+      <table class="board-table"><tbody></tbody></table>
+    </section>
+
+    <section id="appsBoard">
+      <h1>* * * TOP APPS * * *</h1>
+      <table class="board-table"><tbody></tbody></table>
+    </section>
+  </div>
+
+  <img src="bg-bottom.png" class="board-bg-image" alt="Board bottom">
+</div>
+
+<script>
+const CONFIG = {
+  scoreSlots: 10,
+  appSlots: 5,
+  maxNameLength: window.innerWidth <= 320 ? 15 : window.innerWidth <= 480 ? 18 : 40
+};
+
+class BoardRow {
+  constructor(id) {
+    this.nameEl = document.querySelector(`#${id} .name`);
+    this.satsEl = document.querySelector(`#${id} .sats`);
+  }
+
+  update(name, sats) {
+    const truncatedName = name.length > CONFIG.maxNameLength
+      ? name.slice(0, CONFIG.maxNameLength) + '...'
+      : name;
+
+    this.nameEl.textContent = truncatedName;
+    this.satsEl.textContent = sats;
+  }
+}
+
+function createBoard(id, field, numSlots) {
+  const tbody = document.querySelector(`#${id} tbody`);
+  const rows = [];
+
+  for (let i = 1; i <= numSlots; i++) {
+    const tr = document.createElement('tr');
+    tr.id = `${id}-${i}`;
+    tr.innerHTML = '<td class="name"></td><td class="sats"></td>';
+    tbody.appendChild(tr);
+    rows[i] = new BoardRow(`${id}-${i}`);
+  }
+
+  return new Scores(field, numSlots, (score) => {
+    const sats = score.sats?.toLocaleString() || '';
+    const name = score.name || '';
+    rows[score.position].update(name, sats);
+  });
+}
+
+function updateLatestBoost(boost) {
+  const { sender_name, sats, type, app_name, message } = boost;
+  const app = type === 'boost' ? `FROM ${app_name}` : 'FROM NOSTR';
+
+  const messages = [];
+  if (message) messages.push(`"${message}"`);
+  messages.push(`${sender_name} VIA ${app}`.toUpperCase());
+
+  const latestEl = document.querySelector('#latestMessage');
+  latestEl.innerHTML = '';
+
+  messages.forEach(m => {
+    const div = document.createElement('div');
+    div.textContent = m;
+    latestEl.appendChild(div);
+  });
+}
+
+function updateSatCounter(sats) {
+  const satCounterEl = document.querySelector('#satCounter');
+  satCounterEl.textContent = `${sats.toLocaleString()} SATS`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const topBoosters = createBoard('boostsBoard', 'sender_name', CONFIG.scoreSlots);
+  const topApps = createBoard('appsBoard', 'app_name', CONFIG.appSlots);
+  const latestBoost = new LatestPaymentRaw(updateLatestBoost);
+  const satCounter = new SatCounter(updateSatCounter);
+
+  function addBoost(payment, old) {
+    topBoosters.add(payment, old);
+    topApps.add(payment, old);
+    latestBoost.add(payment, old);
+    satCounter.add(payment, old);
+  }
+
+  const app = new PaymentTracker();
+  const params = new URLSearchParams(window.location.search);
+
+  app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce");
+  app.setFilter('after', params.get("after") || "2026-01-08 00:00:00 -0500");
+  app.setFilter('before', params.get("before"));
+  app.setFilter('podcasts', ["As If: Lit At Boost Beach"]);
+  app.setFilter('episodeGuids', ["c6fa7516-3be6-43a2-b5cf-73484baf49dd"]);
+  app.setFilter('eventGuids', ["58eb81f8-caeb-4c77-a326-36e406207fe0", "303fe7e4-32c1-4f67-977d-967f251cb6b0"]);
+  app.setListener(addBoost);
+  app.start();
+
+  window.testBoost = (name, sats) => app.testBoost(name, sats);
+});
+</script>
+
+</body>
+</html>
