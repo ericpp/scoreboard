@@ -23,8 +23,16 @@ type IncomingBoost struct {
 }
 
 func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
+    // Get connection string and disable prepared statements for serverless
+    connStr := os.Getenv("POSTGRES_URL")
+    if strings.Contains(connStr, "?") {
+        connStr += "&prefer_simple_protocol=true"
+    } else {
+        connStr += "?prefer_simple_protocol=true"
+    }
+
     // open database
-    db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+    db, err := sql.Open("postgres", connStr)
 
     if err != nil {
         return nil, err
