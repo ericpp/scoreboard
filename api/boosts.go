@@ -9,6 +9,7 @@ import (
     "log"
     "strconv"
     "strings"
+    "sync"
     "os"
     _ "github.com/lib/pq"
 )
@@ -22,27 +23,32 @@ type IncomingBoost struct {
     Value            float64      `json:"value"`
 }
 
+var (
+    db     *sql.DB
+    dbOnce sync.Once
+)
+
+func getDB() (*sql.DB, error) {
+    var initErr error
+    dbOnce.Do(func() {
+        var err error
+        db, err = sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+        if err != nil {
+            initErr = err
+            return
+        }
+        db.SetMaxOpenConns(10)
+        db.SetMaxIdleConns(5)
+    })
+    if initErr != nil {
+        return nil, initErr
+    }
+    return db, nil
+}
+
 func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
-    // Get connection string and disable prepared statements for serverless
-    connStr := os.Getenv("POSTGRES_URL")
-    if strings.Contains(connStr, "?") {
-        connStr += "&prefer_simple_protocol=true"
-    } else {
-        connStr += "?prefer_simple_protocol=true"
-    }
-
-    // open database
-    db, err := sql.Open("postgres", connStr)
-
+    db, err := getDB()
     if err != nil {
-        return nil, err
-    }
-
-    // close database
-    defer db.Close()
-
-    // check db
-    if err = db.Ping(); err != nil {
         return nil, err
     }
 
@@ -233,8 +239,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=utf-8")
     w.Header().Set("Access-Control-Allow-Origin", "*")
 
-    js, err := json.Marshal(boosts);
-
+    js, err := json.Marshal(boosts)
     if err != nil {
         log.Print(err)
         http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
