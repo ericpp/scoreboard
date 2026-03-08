@@ -13,6 +13,7 @@ require (
 	github.com/gobwas/ws v1.2.0 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/jackc/pgx/v5 v5.7.2
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/nbd-wtf/go-nostr v0.29.3 // indirect

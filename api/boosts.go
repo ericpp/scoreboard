@@ -1,7 +1,6 @@
 package handler
 
 import (
-    "context"
     "database/sql"
     "encoding/json"
     "fmt"
@@ -11,7 +10,9 @@ import (
     "strings"
     "sync"
     "os"
-    _ "github.com/lib/pq"
+
+    "github.com/jackc/pgx/v5"
+    "github.com/jackc/pgx/v5/stdlib"
 )
 
 type IncomingBoost struct {
@@ -31,8 +32,14 @@ var (
 func getDB() (*sql.DB, error) {
     var initErr error
     dbOnce.Do(func() {
-        var err error
-        db, err = sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+        config, err := pgx.ParseConfig(os.Getenv("POSTGRES_URL"))
+        if err != nil {
+            initErr = err
+            return
+        }
+        config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+        db, err = sql.Open("pgx", stdlib.RegisterConnConfig(config))
         if err != nil {
             initErr = err
             return
@@ -139,7 +146,7 @@ func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
 
     sql := fmt.Sprintf(`SELECT amount, boostagram, created_at, creation_date, identifier, value FROM invoices WHERE %s ORDER BY creation_date DESC LIMIT %d OFFSET %d`, strings.Join(where, " AND "), items, offset)
 
-    rows, err := db.QueryContext(context.Background(), sql, params...)
+    rows, err := db.Query(sql, params...)
     if err != nil {
         return nil, err
     }
