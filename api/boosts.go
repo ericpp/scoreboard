@@ -1,6 +1,7 @@
 package handler
 
 import (
+    "context"
     "database/sql"
     "encoding/json"
     "fmt"
@@ -124,7 +125,7 @@ func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
 
     sql := fmt.Sprintf(`SELECT amount, boostagram, created_at, creation_date, identifier, value FROM invoices WHERE %s ORDER BY creation_date DESC LIMIT %d OFFSET %d`, strings.Join(where, " AND "), items, offset)
 
-    rows, err := db.Query(sql, params...)
+    rows, err := db.QueryContext(context.Background(), sql, params...)
     if err != nil {
         return nil, err
     }
@@ -216,7 +217,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
     boosts, err := GetBoosts(query)
     if err != nil {
-        log.Fatal(err)
+        log.Print(err)
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        return
     }
 
     w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -226,7 +229,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
     if err != nil {
         log.Print(err)
-        os.Exit(1)
+        http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
+        return
     }
 
     fmt.Fprint(w, string(js))
