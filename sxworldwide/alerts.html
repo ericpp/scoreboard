@@ -1,0 +1,81 @@
+<html>
+<head>
+<title>Boost Alert</title>
+
+<link href="../alerts.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+<style>
+@font-face {
+  font-family: 'Limelight Regular'; /* Name of the font */
+  src: url('Limelight-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.messageFlex {
+  font-family: 'Limelight Regular', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #000;
+  text-shadow: none;
+}
+
+.background {
+  height: 323px;
+  width: 608px;
+}
+
+.message {
+  width: 360px;
+  display: flex;
+  align-items: center;
+}
+
+</style>
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../alerts.js"></script>
+<script src="config.js"></script>
+</head>
+
+<body>
+<div id="box">
+  <div id="alert" class="alert fade">
+    <div class="messageFlex">
+      <img src="alert.jpg" class="background"/>
+      <div class="message fade">
+        <div class="messageText" style="flex: 1 1"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  const config = loadConfig();
+  const slots = [
+    {
+      id: "#alert",
+      events: {
+        messageRender: (payment) => {
+          const message = [`${payment.sender_name} sent ${payment.sats.toLocaleString()} sats`];
+          if (payment.message) {
+            message.push(`"${payment.message}"`);
+          }
+          return message;
+        },
+      },
+    },
+  ]
+  startAlerts({
+    slots,
+    loadBoosts: true,
+    loadZaps: true,
+    ...config,
+  })
+})()
+</script>
+</body>
+</html>
