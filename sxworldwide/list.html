@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SXWORLDWIDE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../board.js"></script>
+<script src="config.js"></script>
+
+<style>
+  :root {
+    --color-primary: transparent;
+    --color-text: #000;
+    --color-text-shadow: #ccc;
+    --color-sats: #f00;
+    --color-sats-shadow: #c00;
+  }
+
+  @font-face {
+    font-family: 'Oswald';
+    src: url('Oswald-Bold.ttf') format('truetype');
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: min(2.2vh, 20px);
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Oswald', sans-serif;
+    color: var(--color-text);
+    background-color: var(--color-primary);
+  }
+
+  .board {
+    position: absolute;
+    width: 300px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .board-bg-image {
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .board-content {
+    padding: 0 20px;
+    background: url('bg-middle.png') 100% / 100%;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-height: 0;
+    width: 100%;
+  }
+
+  #list {
+    width: 100%;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow: auto;
+  }
+
+  #list li {
+    padding: .25rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  #list li:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  #list li small {
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 0.85em;
+  }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <img src="bg-top.png" class="board-bg-image" alt="Board top">
+
+  <div class="board-content">
+    <ul id="list"><li></li></ul>
+  </div>
+
+  <img src="bg-bottom.png" class="board-bg-image" alt="Board bottom">
+</div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', () => {
+    let app = new PaymentTracker(loadConfig())
+    // let app = new PaymentTracker()
+    app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
+
+    let params = (new URL(document.location)).searchParams
+
+    const dt = new Date()
+    dt.setDate(dt.getDate() - 30)
+    const lastMonth = dt.toISOString().slice(0, 10)
+
+    app.setFilter('after', params.get("after"))
+    app.setFilter('before', params.get("before"))
+
+    const items = ["podcasts", "episodeGuids", "eventGuids"]
+    items.forEach(key => {
+        const value = params.get(key)
+
+        if (value) {
+            app.setFilter(key, value.split(/,/))
+        }
+    })
+
+    const podcasts = params.get("podcasts")
+
+    if (!podcasts) {
+        app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Mutton, Mead & Music"])
+        app.setFilter('after', params.get("after") || lastMonth)
+    }
+
+    const addBoost = (boost, old) => {
+        if (boost.action != "boost" && boost.action != "zap") {
+            return
+        }
+
+        let beforeItem = null
+
+        for (let item of list.children) {
+            if (boost.creation_date > item.getAttribute('data-timestamp')) {
+              beforeItem = item
+              break
+            }
+        }
+
+        const boostzap = boost.action == "boost" ? "boosted" : "zapped";
+        const app = boost.action == "boost" ? `from ${boost.app_name}` : ``;
+        let donor = `${boost.sender_name} ${boostzap} ${boost.sats} sats`
+
+        if (boost.message) {
+          donor += `:`
+        }
+
+        const description = boost.action == "boost"
+          ? `${app} - ${boost.podcast}`
+          : `from Nostr`;
+
+        const li = document.createElement("li")
+        li.classList.add("added")
+        li.setAttribute('data-timestamp', boost.creation_date)
+        li.appendChild(document.createTextNode(donor))
+
+        if (boost.message) {
+          li.appendChild(document.createElement('br'))
+          li.appendChild(document.createTextNode(`"${boost.message}"`))
+        }
+
+        li.appendChild(document.createElement('br'))
+
+        const small = document.createElement("small")
+        small.appendChild(document.createTextNode(description))
+        li.appendChild(small)
+
+        if (beforeItem) {
+            list.insertBefore(li, beforeItem)
+        }
+        else {
+            list.appendChild(li)
+        }
+
+        setTimeout(() => li.classList.remove("added"), 1)
+    }
+
+    app.setListener(addBoost)
+    app.start()
+})
+
+</script>
+</body>
+</html>
