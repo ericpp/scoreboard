@@ -46,7 +46,7 @@ class AlertImage extends AlertMedia {
 
     setTimeout(() => {
       this.playing = false
-    }, this.duration * 1000)
+    }, (this.duration+.1) * 1000)
   }
 }
 
@@ -84,6 +84,9 @@ class AlertSlot {
     this.payment = null
     this.selectedImage = null
     this.lastSatTotal = 0
+
+    const rootHide = parseFloat(this.root.getAttribute("data-timehide"))
+    this.alert.duration = isNaN(rootHide) ? 10 : rootHide;
 
     const timeShow = parseFloat(this.messageRoot.getAttribute("data-timeshow"))
     const timeHide = parseFloat(this.messageRoot.getAttribute("data-timehide"))
