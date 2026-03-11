@@ -101,35 +101,6 @@
 <script>
 
 document.addEventListener('DOMContentLoaded', () => {
-    let app = new PaymentTracker(loadConfig())
-    // let app = new PaymentTracker()
-    app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce")
-
-    let params = (new URL(document.location)).searchParams
-
-    const dt = new Date()
-    dt.setDate(dt.getDate() - 30)
-    const lastMonth = dt.toISOString().slice(0, 10)
-
-    app.setFilter('after', params.get("after"))
-    app.setFilter('before', params.get("before"))
-
-    const items = ["podcasts", "episodeGuids", "eventGuids"]
-    items.forEach(key => {
-        const value = params.get(key)
-
-        if (value) {
-            app.setFilter(key, value.split(/,/))
-        }
-    })
-
-    const podcasts = params.get("podcasts")
-
-    if (!podcasts) {
-        app.setFilter('excludePodcasts', ["Podcasting 2.0", "Pew Pew", "12 Rods", "Mutton, Mead & Music"])
-        app.setFilter('after', params.get("after") || lastMonth)
-    }
-
     const addBoost = (boost, old) => {
         if (boost.action != "boost" && boost.action != "zap") {
             return
@@ -181,6 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => li.classList.remove("added"), 1)
     }
+
+    let app = new PaymentTracker(loadConfig())
 
     app.setListener(addBoost)
     app.start()
