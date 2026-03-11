@@ -177,7 +177,7 @@ function updateLatestBoost(boost) {
 
   const messages = [];
   if (message) messages.push(`"${message}"`);
-  messages.push(`${sender_name} VIA ${app}`.toUpperCase());
+  messages.push(`${sender_name} ${app}`.toUpperCase());
 
   const latestEl = document.querySelector('#latestMessage');
   latestEl.innerHTML = '';
@@ -207,16 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
     satCounter.add(payment, old);
   }
 
-  const app = new PaymentTracker();
-  const params = new URLSearchParams(window.location.search);
-  const config = loadConfig();
+  const app = new PaymentTracker(loadConfig());
 
-  app.setNostrBoostPkey(config.nostrBoostPkey);
-  app.setFilter('after', params.get("after") || config.after);
-  app.setFilter('before', params.get("before"));
-  app.setFilter('podcasts', config.podcasts);
-  app.setFilter('episodeGuids', config.episodeGuids);
-  app.setFilter('eventGuids', config.eventGuids);
   app.setListener(addBoost);
   app.start();
 
