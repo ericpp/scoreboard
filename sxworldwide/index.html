@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const config = loadConfig();
 
-  app.setNostrBoostPkey("804eeaaf5afc67cae9aa50a6ae03571ae693fcb277bd40d64b966b12dcba25ce");
+  app.setNostrBoostPkey(config.nostrBoostPkey);
   app.setFilter('after', params.get("after") || config.after);
   app.setFilter('before', params.get("before"));
   app.setFilter('podcasts', config.podcasts);
