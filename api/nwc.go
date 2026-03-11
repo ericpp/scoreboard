@@ -148,50 +148,12 @@ func parseBoostagramFromHex(hexValue string) (Boostagram, error) {
 		return Boostagram{}, fmt.Errorf("failed to decode hex: %w", err)
 	}
 
-	var data map[string]interface{}
+	var data Boostagram
 	if err := json.Unmarshal(decoded, &data); err != nil {
 		return Boostagram{}, fmt.Errorf("failed to unmarshal boostagram: %w", err)
 	}
 
-	boostagram := Boostagram{}
-
-	if v, ok := data["podcast"].(string); ok {
-		boostagram.Podcast = v
-	}
-	if v, ok := data["episode"].(string); ok {
-		boostagram.Episode = v
-	}
-	if v, ok := data["action"].(string); ok {
-		boostagram.Action = v
-	}
-	if v, ok := data["app_name"].(string); ok {
-		boostagram.AppName = v
-	}
-	if v, ok := data["sender_name"].(string); ok {
-		boostagram.SenderName = v
-	}
-	if v, ok := data["message"].(string); ok {
-		boostagram.Message = v
-	}
-	if v, ok := data["episode_guid"].(string); ok {
-		boostagram.EpisodeGuid = v
-	}
-
-	if v, ok := data["value_msat_total"].(float64); ok {
-		boostagram.ValueMsatTotal = int(v)
-	}
-
-	if v, ok := data["feedID"].(float64); ok {
-		feedID := v
-		boostagram.FeedID = &feedID
-	}
-
-	if v, ok := data["itemID"].(float64); ok {
-		itemID := v
-		boostagram.ItemID = &itemID
-	}
-
-	return boostagram, nil
+	return data, nil
 }
 
 func ParseInvoiceFromJson(payload []byte) (IncomingInvoice, error) {
