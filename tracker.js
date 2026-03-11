@@ -3,6 +3,7 @@ class PaymentTracker {
     this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net"]
     this.nostrBoostPkey = config.nostrBoostPkey || null
     this.nostrZapEvent = config.nostrZapEvent || null
+    this.nostrZapNpub = config.nostrZapNpub || null
     this.loadBoosts = config.loadBoosts ?? true
     this.loadZaps = config.loadZaps ?? true
     this.maxIdentifiers = config.maxIdentifiers || 10000 // Configurable memory limit
@@ -61,6 +62,10 @@ class PaymentTracker {
     this.nostrZapEvent = event
   }
 
+  setNostrZapNpub(npub) {
+    this.nostrZapNpub = npub
+  }
+
   setListener(listener) {
     if (typeof listener !== 'function') {
       throw new Error('Listener must be a function')
@@ -93,6 +98,21 @@ class PaymentTracker {
     })
   }
 
+  async subscribeZapsForNpub() {
+    if (!this.nostrZapNpub) return
+
+    const streams = await this.nostrWatcher.findActiveStreams(this.nostrZapNpub, this.filters.after)
+    console.log(`Found ${streams.length} active/pending streams for ${this.nostrZapNpub}`)
+
+    streams.forEach(naddr => {
+      console.log(`Subscribing to zaps for stream: ${naddr}`)
+      this.nostrWatcher.subscribeZaps(naddr, (item) => {
+        if (this.destroyed) return
+        this.add(item)
+      })
+    })
+  }
+
   async start() {
     if (!this.listener) {
       throw new Error('Listener must be set before calling start()')
@@ -113,6 +133,10 @@ class PaymentTracker {
 
       if (this.nostrZapEvent) {
         this.subscribeZaps()
+      }
+
+      if (this.nostrZapNpub) {
+        await this.subscribeZapsForNpub()
       }
     } catch (error) {
       console.error('Error starting PaymentTracker:', error)
@@ -252,6 +276,64 @@ class NostrWatcher {
     } catch (error) {
       console.error('Error parsing activity:', error)
       return addr
+    }
+  }
+
+  async findActiveStreams(npub, afterTimestamp = null) {
+    if (!npub) return []
+
+    const pubkey = this.parsePubkey(npub)
+    if (!pubkey) return []
+
+    try {
+      // Build filter with optional since parameter
+      const filter = {
+        authors: [pubkey],
+        kinds: [30311],
+        limit: 100
+      }
+
+      // Apply 'after' filter if provided
+      if (afterTimestamp) {
+        filter.since = afterTimestamp
+      }
+
+      // Query for kind 30311 (live streaming) events by this author
+      const events = await this.nostrPool.querySync(
+        this.nostrRelays,
+        filter
+      )
+
+      const activeStreams = []
+
+      // Filter for active or pending streams and convert to naddr
+      for (const event of events) {
+        const statusTag = event.tags.find(tag => tag[0] === 'status')
+        const status = statusTag ? statusTag[1] : null
+
+        // Only include live or planned streams
+        if (status === 'live') {
+          const dTag = event.tags.find(tag => tag[0] === 'd')
+          const identifier = dTag ? dTag[1] : ''
+
+          try {
+            // Create naddr from event data
+            const naddr = NostrTools.nip19.naddrEncode({
+              kind: event.kind,
+              pubkey: event.pubkey,
+              identifier: identifier
+            })
+            activeStreams.push(naddr)
+          } catch (error) {
+            console.error('Error encoding naddr:', error)
+          }
+        }
+      }
+
+      return activeStreams
+    } catch (error) {
+      console.error('Error finding active streams:', error)
+      return []
     }
   }
 

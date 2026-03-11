@@ -327,6 +327,7 @@ async function startAlerts(config = {}) {
     if (url.before) app.setFilter("before", url.before)
     if (url.after) app.setFilter("after", url.after)
     if (url.naddr) app.setNostrZapEvent(url.naddr)
+    if (url.npub) app.setNostrZapNpub(url.npub)
 
     if (url.loadBoosts) app.loadBoosts = true
     if (url.loadZaps) app.loadZaps = true
