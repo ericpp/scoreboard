@@ -72,9 +72,12 @@
 
   #list li {
     padding: .25rem;
-    background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
-    transition: background 0.2s;
+    transition: background 2s ease-out;
+  }
+
+  #list li.added {
+    background: rgba(255, 255, 150, 0.35);
   }
 
   #list li:hover {
@@ -137,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
             list.appendChild(li)
         }
 
-        setTimeout(() => li.classList.remove("added"), 1)
+        setTimeout(() => li.classList.remove("added"), 50)
     }
 
     let app = new PaymentTracker(loadConfig())
