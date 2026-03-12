@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -546,27 +547,31 @@ func PublishToNostr(invoice IncomingInvoice) error {
 	// calling Sign sets the event ID field and the event Sig field
 	ev.Sign(skStr)
 
-	// publish the event to relays with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
+	var wg sync.WaitGroup
 	for _, url := range nostrRelays {
-		relay, err := nostr.RelayConnect(ctx, url)
+		wg.Add(1)
+		go func(relayURL string) {
+			defer wg.Done()
 
-		if err != nil {
-			log.Printf("failed to connect to relay %s: %v", url, err)
-			continue
-		}
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
 
-		if err := relay.Publish(ctx, ev); err != nil {
-			log.Printf("failed to publish to relay %s: %v", url, err)
-			relay.Close()
-			continue
-		}
+			relay, err := nostr.RelayConnect(ctx, relayURL)
+			if err != nil {
+				log.Printf("failed to connect to relay %s: %v", relayURL, err)
+				return
+			}
+			defer relay.Close()
 
-		log.Printf("published to %s", url)
-		relay.Close()
+			if err := relay.Publish(ctx, ev); err != nil {
+				log.Printf("failed to publish to relay %s: %v", relayURL, err)
+				return
+			}
+
+			log.Printf("published to %s", relayURL)
+		}(url)
 	}
+	wg.Wait()
 
 	return nil
 }
