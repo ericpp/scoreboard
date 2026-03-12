@@ -559,7 +559,7 @@ func PublishToNostr(invoice IncomingInvoice) error {
 		go func(relayURL string) {
 			defer wg.Done()
 
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			relay, err := nostr.RelayConnect(ctx, relayURL)
