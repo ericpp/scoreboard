@@ -91,6 +91,7 @@ func GetBoosts(query map[string]string) ([]IncomingBoost, error) {
     if hasPodcast {
         for _, val := range strings.Split(podcast, ",") {
             if val == "" {
+                placeholders = append(placeholders, fmt.Sprintf(`podcast = ''`))
                 continue
             }
             params = append(params, "%"+val+"%")
