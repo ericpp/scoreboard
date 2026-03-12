@@ -93,18 +93,19 @@
 <body>
 
 <div class="board">
-  <img src="bg-top.png" class="board-bg-image" alt="Board top">
-
   <div class="board-content">
     <ul id="list"><li></li></ul>
   </div>
-
-  <img src="bg-bottom.png" class="board-bg-image" alt="Board bottom">
 </div>
 
 <script>
 
 document.addEventListener('DOMContentLoaded', () => {
+    const decodeEntities = (() => {
+        const el = document.createElement('textarea')
+        return text => { el.innerHTML = text; return el.textContent }
+    })()
+
     const addBoost = (boost, old) => {
         if (boost.action != "boost" && boost.action != "zap") {
             return
@@ -120,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const app = boost.action == "zap" ? "Nostr": boost.app_name;
-        const sender_message = `${boost.sender_name}` + (boost.message ? `: "${boost.message}"` : '');
+        const sender_message = decodeEntities(boost.sender_name) + (boost.message ? `: "${decodeEntities(boost.message)}"` : '');
         const description = `${boost.sats} sats using ${app}`;
 
         const li = document.createElement("li")
