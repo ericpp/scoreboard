@@ -21,7 +21,7 @@ import (
 	svix "github.com/svix/svix-webhooks/go"
 )
 
-var nostrRelays = []string{"wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net"}
+var nostrRelays = []string{"wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net", "wss://relay.snort.social"}
 
 type IncomingInvoice struct {
 	Amount       float64     `json:"amount"`
