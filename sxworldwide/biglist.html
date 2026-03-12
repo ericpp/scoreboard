@@ -60,9 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const date = new Date(boost.creation_date * 1000)
         const app = boost.action == "zap" ? "Nostr": boost.app_name;
-        const sender_message = `${boost.sender_name}` + (boost.message ? `: "${boost.message}"` : '');
-        const description = `${boost.sats} sats using ${app}`;
+        const sender_message = `${boost.sats} sats from ${boost.sender_name}` + (boost.message ? `: "${boost.message}"` : '');
+        const description = `${date.toLocaleString()} - ${app}`;
 
         const li = document.createElement("li")
         li.classList.add("added")
