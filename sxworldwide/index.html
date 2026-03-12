@@ -168,18 +168,23 @@ function createBoard(id, field, numSlots) {
 
   return new Scores(field, numSlots, (score) => {
     const sats = score.sats?.toLocaleString() || '';
-    const name = score.name || '';
+    const name = decodeEntities(score.name || '');
     rows[score.position].update(name, sats);
   });
 }
+
+const decodeEntities = (() => {
+  const el = document.createElement('textarea')
+  return text => { el.innerHTML = text; return el.textContent }
+})()
 
 function updateLatestBoost(boost) {
   const { sender_name, sats, type, app_name, message } = boost;
   const app = type === 'boost' ? `FROM ${app_name}` : 'FROM NOSTR';
 
   const messages = [];
-  if (message) messages.push(`"${message}"`);
-  messages.push(`${sender_name} ${app}`.toUpperCase());
+  if (message) messages.push(`"${decodeEntities(message)}"`);
+  messages.push(`${decodeEntities(sender_name)} ${app}`.toUpperCase());
 
   const latestEl = document.querySelector('#latestMessage');
   latestEl.innerHTML = '';

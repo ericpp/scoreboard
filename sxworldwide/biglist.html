@@ -46,6 +46,11 @@
 <script>
 
 document.addEventListener('DOMContentLoaded', () => {
+    const decodeEntities = (() => {
+        const el = document.createElement('textarea')
+        return text => { el.innerHTML = text; return el.textContent }
+    })()
+
     const addBoost = (boost, old) => {
         if (boost.action != "boost" && boost.action != "zap") {
             return
@@ -62,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const date = new Date(boost.creation_date * 1000)
         const app = boost.action == "zap" ? "Nostr": boost.app_name;
-        const sender_message = `${boost.sats} sats from ${boost.sender_name}` + (boost.message ? `: "${boost.message}"` : '');
+        const sender_message = `${boost.sats} sats from ${decodeEntities(boost.sender_name)}` + (boost.message ? `: "${decodeEntities(boost.message)}"` : '');
         const description = `${date.toLocaleString()} - ${app}`;
 
         const li = document.createElement("li")
