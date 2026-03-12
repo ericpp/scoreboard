@@ -332,11 +332,11 @@ func fetchRSSPaymentBoostagram(paymentURL string) (RssPayment, error) {
 	return rssPayment, nil
 }
 
-func SaveToDatabase(invoice IncomingInvoice) error {
+func SaveToDatabase(invoice IncomingInvoice) (bool, error) {
 	// open database
 	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// close database
@@ -344,7 +344,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 
 	// check db
 	if err = db.Ping(); err != nil {
-		return err
+		return false, err
 	}
 
 	log.Printf("inserting %s", invoice.Identifier)
@@ -362,7 +362,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (identifier) DO NOTHING`
 
-	_, err = db.Exec(
+	result, err := db.Exec(
 		insertSql,
 		invoice.Amount,
 		serializedMetadata,
@@ -388,10 +388,15 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 	)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return rowsAffected > 0, nil
 }
 
 func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
@@ -612,9 +617,16 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := SaveToDatabase(invoice); err != nil {
+	isNewPayment, err := SaveToDatabase(invoice)
+	if err != nil {
 		log.Printf("failed to save to database: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !isNewPayment {
+		log.Printf("payment %s already exists in database, skipping broadcast", invoice.Identifier)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
