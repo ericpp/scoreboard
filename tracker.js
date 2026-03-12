@@ -81,8 +81,9 @@ class PaymentTracker {
 
   async loadStoredBoosts() {
     this.storedBoosts = new StoredBoosts(this.filters)
+    const resolveText = (text) => this.nostrWatcher.resolveNostrReferences(text)
     try {
-      await this.storedBoosts.load((item) => this.add(item))
+      await this.storedBoosts.load((item) => this.add(item), resolveText)
     } catch (error) {
       console.error('Error loading stored boosts:', error)
       throw error
@@ -389,6 +390,7 @@ class NostrWatcher {
 
           const boost = invoice.boostagram
           const remoteInfo = await addRemoteInfo(boost)
+          const message = await self.resolveNostrReferences(boost.message)
 
           callback({
             type: 'boost',
@@ -403,7 +405,7 @@ class NostrWatcher {
             episode_guid: boost.episode_guid || null,
             episode: boost.episode || null,
             sats: Math.floor(boost.value_msat_total / 1000),
-            message: boost.message,
+            message: message,
             isOld: getIsOld(),
             ...remoteInfo,
           })
@@ -484,6 +486,7 @@ class NostrWatcher {
           }
 
           const profile = await self.getNostrProfile(zapRequest.pubkey)
+          const message = await self.resolveNostrReferences(event.content)
 
           callback({
             type: 'zap',
@@ -498,7 +501,7 @@ class NostrWatcher {
             episode_guid: null,
             episode: null,
             sats: Math.floor(value_msat_total / 1000),
-            message: event.content,
+            message: message,
             isOld: getIsOld(),
           })
         } catch (error) {
@@ -546,6 +549,37 @@ class NostrWatcher {
         this.nostrProfileQueue[pubkey].push(resolve)
       }
     })
+  }
+
+  async resolveNostrReferences(text) {
+    if (!text) return text
+
+    const matches = [...new Set(text.match(/nostr:npub1[a-z0-9]+/g) || [])]
+    if (matches.length === 0) return text
+
+    const lookups = matches.map(async match => {
+      const npub = match.replace('nostr:', '')
+      try {
+        const pubkey = this.parsePubkey(npub)
+        if (pubkey && pubkey !== npub) {
+          const profile = await this.getNostrProfile(pubkey)
+          return { match, name: profile.display_name || profile.name }
+        }
+      } catch (error) {
+        console.error('Error resolving nostr reference:', error)
+      }
+      return { match, name: null }
+    })
+
+    const results = await Promise.all(lookups)
+
+    for (const { match, name } of results) {
+      if (name) {
+        text = text.replaceAll(match, `@${name}`)
+      }
+    }
+
+    return text
   }
 
   getMsatsFromBolt11(bolt11) {
@@ -638,7 +672,7 @@ class StoredBoosts {
     this.maxPages = filters.maxPages || 100 // Configurable max pages
   }
 
-  async load(callback) {
+  async load(callback, resolveNostr) {
     let page = 1
     const items = 1000
     let lastBoostAt = this.filters.after || null
@@ -715,6 +749,7 @@ class StoredBoosts {
 
           try {
             const remoteInfo = await addRemoteInfo(boost)
+            const message = resolveNostr ? await resolveNostr(boost.message) : boost.message
 
             callback({
               type: 'boost',
@@ -728,7 +763,7 @@ class StoredBoosts {
               episode_guid: boost.episode_guid || null,
               episode: boost.episode || null,
               sats: Math.floor(boost.value_msat_total / 1000),
-              message: boost.message,
+              message: message,
               isOld: true,
               ...remoteInfo,
             })
