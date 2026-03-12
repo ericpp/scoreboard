@@ -5,7 +5,7 @@ class PaymentTracker {
       "wss://nos.lol",
       "wss://relay.primal.net",
       "wss://nostr-pub.wellorder.net",
-      "wss://nostr.oxtr.dev",
+      "wss://nostr.oxtr.dev"
     ]
     this.nostrBoostPkey = config.nostrBoostPkey || null
     this.nostrZapEvent = config.nostrZapEvent || null
