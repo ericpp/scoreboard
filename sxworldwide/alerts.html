@@ -55,15 +55,20 @@
 
 <script>
 (async () => {
+  const decodeEntities = (() => {
+    const el = document.createElement('textarea')
+    return text => { el.innerHTML = text; return el.textContent }
+  })()
+
   const config = loadConfig();
   const slots = [
     {
       id: "#alert",
       events: {
         messageRender: (payment) => {
-          const message = [`${payment.sender_name} sent ${payment.sats.toLocaleString()} sats`];
+          const message = [`${decodeEntities(payment.sender_name)} sent ${payment.sats.toLocaleString()} sats`];
           if (payment.message) {
-            message.push(`"${payment.message}"`);
+            message.push(`"${decodeEntities(payment.message)}"`);
           }
           return message;
         },
