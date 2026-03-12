@@ -114,28 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const boostzap = boost.action == "boost" ? "boosted" : "zapped";
-        const app = boost.action == "boost" ? `from ${boost.app_name}` : ``;
-        let donor = `${boost.sender_name} ${boostzap} ${boost.sats} sats`
-
-        if (boost.message) {
-          donor += `:`
-        }
-
-        const description = boost.action == "boost"
-          ? `${app} - ${boost.podcast}`
-          : `from Nostr`;
+        const app = boost.action == "zap" ? "Nostr": boost.app_name;
+        const sender_message = `${boost.sender_name}` + (boost.message ? `: "${boost.message}"` : '');
+        const description = `${boost.sats} sats using ${app}`;
 
         const li = document.createElement("li")
         li.classList.add("added")
         li.setAttribute('data-timestamp', boost.creation_date)
-        li.appendChild(document.createTextNode(donor))
-
-        if (boost.message) {
-          li.appendChild(document.createElement('br'))
-          li.appendChild(document.createTextNode(`"${boost.message}"`))
-        }
-
+        li.appendChild(document.createTextNode(sender_message))
         li.appendChild(document.createElement('br'))
 
         const small = document.createElement("small")
