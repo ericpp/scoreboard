@@ -1,0 +1,103 @@
+<html>
+<head>
+<title>List</title>
+<style>
+  body {
+    background-color: black;
+    color: white;
+    font-size: 24px;
+  }
+
+  ul {
+    list-style: none;
+  }
+
+  li {
+    margin: 0.5em 0;
+    transition: color 1s 0s;
+    cursor: pointer;
+  }
+
+  li.added {
+    color: #ff0;
+  }
+
+  li.highlight {
+    background-color: #333;
+  }
+
+  li small {
+    color: #999;
+  }
+
+</style>
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="config.js"></script>
+</head>
+
+<body>
+
+<h3>Boosts</h3>
+
+<ul id="list">
+</ul>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', () => {
+    const addBoost = (boost, old) => {
+        if (boost.action != "boost" && boost.action != "zap") {
+            return
+        }
+
+        let beforeItem = null
+
+        for (let item of list.children) {
+            if (boost.creation_date > item.getAttribute('data-timestamp')) {
+              beforeItem = item
+              break
+            }
+        }
+
+        const app = boost.action == "zap" ? "Nostr": boost.app_name;
+        const sender_message = `${boost.sender_name}` + (boost.message ? `: "${boost.message}"` : '');
+        const description = `${boost.sats} sats using ${app}`;
+
+        const li = document.createElement("li")
+        li.classList.add("added")
+        li.setAttribute('data-timestamp', boost.creation_date)
+        li.appendChild(document.createTextNode(sender_message))
+        li.appendChild(document.createElement('br'))
+
+        const small = document.createElement("small")
+        small.appendChild(document.createTextNode(description))
+        li.appendChild(small)
+
+        if (beforeItem) {
+            list.insertBefore(li, beforeItem)
+        }
+        else {
+            list.appendChild(li)
+        }
+
+        li.addEventListener("click", () => {
+            [...list.children].forEach((item) => {
+                item.classList.remove("highlight")
+            })
+
+            li.classList.add("highlight")
+        })
+
+        setTimeout(() => li.classList.remove("added"), 50)
+    }
+
+    let app = new PaymentTracker(loadConfig())
+
+    app.setListener(addBoost)
+    app.start()
+})
+
+</script>
+</body>
+</html>
