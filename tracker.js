@@ -212,7 +212,11 @@ class PaymentTracker {
     if (this.filters.after && this.filters.after > payment.creation_date) return
 
     // Check podcast, event, or episode match if filters are set
-    const podcastMatch = this.filters.podcasts?.some(p => payment.podcast?.toLowerCase().includes(p?.toLowerCase()))
+    const podcastMatch = this.filters.podcasts?.some(p => {
+      if (p === '') return payment.podcast === ''
+      return payment.podcast?.toLowerCase().includes(p?.toLowerCase())
+    })
+
     const eventGuidMatch = this.filters.eventGuids?.some(e => payment.event_guid === e)
     const episodeGuidMatch = this.filters.episodeGuids?.some(e => payment.episode_guid === e)
 
