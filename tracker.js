@@ -108,15 +108,13 @@ class PaymentTracker {
   async subscribeZapsForNpub() {
     if (!this.nostrZapNpub) return
 
-    const streams = await this.nostrWatcher.findActiveStreams(this.nostrZapNpub, this.filters.after)
-    console.log(`Found ${streams.length} active/pending streams for ${this.nostrZapNpub}`)
+    const streams = await this.nostrWatcher.findStreams(this.nostrZapNpub, this.filters.after)
+    console.log(`Found ${streams.length} streams for ${this.nostrZapNpub}`)
 
-    streams.forEach(naddr => {
-      console.log(`Subscribing to zaps for stream: ${naddr}`)
-      this.nostrWatcher.subscribeZaps(naddr, (item) => {
-        if (this.destroyed) return
-        this.add(item)
-      })
+    console.log(`Subscribing to zaps for streams: ${streams.join(', ')}`)
+    this.nostrWatcher.subscribeMultiZaps(streams, (item) => {
+      if (this.destroyed) return
+      this.add(item)
     })
   }
 
@@ -263,6 +261,7 @@ class NostrWatcher {
     this.reconnectAttempts = new Map() // Track reconnection attempts
     this.maxReconnectAttempts = 5
     this.reconnectDelay = 1000
+    this.subscriptionCount = 0;
 
     // Set up profile resolution interval
     this.setupProfileResolution()
@@ -290,7 +289,7 @@ class NostrWatcher {
     }
   }
 
-  async findActiveStreams(npub, afterTimestamp = null) {
+  async findStreams(npub, afterTimestamp = null) {
     if (!npub) return []
 
     const pubkey = this.parsePubkey(npub)
@@ -315,33 +314,27 @@ class NostrWatcher {
         filter
       )
 
-      const activeStreams = []
+      const allStreams = []
 
-      // Filter for active or pending streams and convert to naddr
+      // Convert all streams to naddr
       for (const event of events) {
-        const statusTag = event.tags.find(tag => tag[0] === 'status')
-        const status = statusTag ? statusTag[1] : null
+        const dTag = event.tags.find(tag => tag[0] === 'd')
+        const identifier = dTag ? dTag[1] : ''
 
-        // Only include live or planned streams
-        if (status === 'live') {
-          const dTag = event.tags.find(tag => tag[0] === 'd')
-          const identifier = dTag ? dTag[1] : ''
-
-          try {
-            // Create naddr from event data
-            const naddr = NostrTools.nip19.naddrEncode({
-              kind: event.kind,
-              pubkey: event.pubkey,
-              identifier: identifier
-            })
-            activeStreams.push(naddr)
-          } catch (error) {
-            console.error('Error encoding naddr:', error)
-          }
+        try {
+          // Create naddr from event data
+          const naddr = NostrTools.nip19.naddrEncode({
+            kind: event.kind,
+            pubkey: event.pubkey,
+            identifier: identifier
+          })
+          allStreams.push(naddr)
+        } catch (error) {
+          console.error('Error encoding naddr:', error)
         }
       }
 
-      return activeStreams
+      return allStreams
     } catch (error) {
       console.error('Error finding active streams:', error)
       return []
@@ -447,16 +440,21 @@ class NostrWatcher {
     this.subscriptions.push({ id: subscriptionId, sub, cleanup })
   }
 
+
   subscribeZaps(nostrActivity, callback) {
+    return this.subscribeMultiZaps([nostrActivity], callback)
+  }
+
+  subscribeMultiZaps(nostrActivities, callback) {
     if (this.destroyed) return
 
-    const subscriptionId = `zaps-${nostrActivity}`
-    const parsedActivity = this.parseActivity(nostrActivity)
+    const subscriptionId = `zaps-${this.subscriptionCount++}`
+    const parsedActivities = nostrActivities.map(activity => this.parseActivity(activity))
     const { updateOldState, cleanup, getIsOld } = this.handleOldState()
     const self = this
 
     const filters = {
-      '#a': [parsedActivity],
+      '#a': parsedActivities,
       'kinds': [9735],
     }
 
@@ -529,7 +527,7 @@ class NostrWatcher {
 
           setTimeout(() => {
             if (!self.destroyed) {
-              self.subscribeZaps(nostrActivity, callback)
+              self.subscribeZaps(nostrActivities, callback)
             }
           }, self.reconnectDelay * Math.pow(2, attempts)) // Exponential backoff
         } else {
