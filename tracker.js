@@ -9,7 +9,7 @@ class PaymentTracker {
     ]
     this.nostrBoostPkey = config.nostrBoostPkey || null
     this.nostrZapEvent = config.nostrZapEvent || null
-    this.nostrZapNpub = config.nostrZapNpub || null
+    this.nostrZapNpubs = config.nostrZapNpubs || []
     this.loadBoosts = config.loadBoosts ?? true
     this.loadZaps = config.loadZaps ?? true
     this.maxIdentifiers = config.maxIdentifiers || 10000 // Configurable memory limit
@@ -68,8 +68,8 @@ class PaymentTracker {
     this.nostrZapEvent = event
   }
 
-  setNostrZapNpub(npub) {
-    this.nostrZapNpub = npub
+  setNostrZapNpubs(npubs) {
+    this.nostrZapNpubs = npubs
   }
 
   setListener(listener) {
@@ -106,12 +106,13 @@ class PaymentTracker {
   }
 
   async subscribeZapsForNpub() {
-    if (!this.nostrZapNpub) return
+    if (!this.nostrZapNpubs.length) return
 
-    const streams = await this.nostrWatcher.findStreams(this.nostrZapNpub, this.filters.after)
-    console.log(`Found ${streams.length} streams for ${this.nostrZapNpub}`)
+    const streams = await this.nostrWatcher.findStreams(this.nostrZapNpubs, this.filters.after)
 
+    console.log(`Found ${streams.length} streams for ${this.nostrZapNpubs.join(', ')}`)
     console.log(`Subscribing to zaps for streams: ${streams.join(', ')}`)
+
     this.nostrWatcher.subscribeMultiZaps(streams, (item) => {
       if (this.destroyed) return
       this.add(item)
@@ -140,7 +141,7 @@ class PaymentTracker {
         this.subscribeZaps()
       }
 
-      if (this.nostrZapNpub) {
+      if (this.nostrZapNpubs.length) {
         await this.subscribeZapsForNpub()
       }
     } catch (error) {
@@ -289,16 +290,16 @@ class NostrWatcher {
     }
   }
 
-  async findStreams(npub, afterTimestamp = null) {
-    if (!npub) return []
+  async findStreams(npubs, afterTimestamp = null) {
+    if (!npubs.length) return []
 
-    const pubkey = this.parsePubkey(npub)
-    if (!pubkey) return []
+    const pubkeys = npubs.map(npub => this.parsePubkey(npub))
+    if (!pubkeys.length) return []
 
     try {
       // Build filter with optional since parameter
       const filter = {
-        authors: [pubkey],
+        authors: pubkeys,
         kinds: [30311],
         limit: 100
       }
