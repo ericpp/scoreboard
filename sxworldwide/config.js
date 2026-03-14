@@ -2,8 +2,7 @@ function loadConfig() {
   return {
     "nostrBoostPkey": "npub1sp8w4t66l3nu46d22zn2uq6hrtnf8l9jw775p4jtje439h96yh8qzmpw6q",
     "nostrZapNpubs": [
-      "npub1yvscx9vrmpcmwcmydrm8lauqdpngum4ne8xmkgc2d4rcaxrx7tkswdwzdu",
-      "npub1h8gzew8am6cezuq7cpjgudldra40hgnruqrqlsrqnxnzs5wjtczqztps02"
+      "npub1yvscx9vrmpcmwcmydrm8lauqdpngum4ne8xmkgc2d4rcaxrx7tkswdwzdu"
     ],
     "after": "2026-03-10 00:00:00 -0500",
     "podcasts": [
