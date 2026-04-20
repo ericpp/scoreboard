@@ -1,0 +1,83 @@
+<html>
+<head>
+<title>Boost Alert</title>
+
+<link href="../alerts.css" rel="stylesheet">
+<link href="bebas-neue.css" rel="stylesheet">
+
+<style>
+.messageFlex {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.75rem;
+  color: #F87E42;
+  text-shadow: none;
+}
+
+.background {
+  height: 323px;
+  width: 608px;
+}
+
+.message {
+  width: 290px;
+  margin-left: 20px;
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+}
+
+</style>
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../alerts.js"></script>
+<script src="config.js"></script>
+</head>
+
+<body>
+<div id="box">
+
+  <div id="alert" class="alert fade" data-timehide="7.5">
+    <div class="messageFlex">
+      <video class="background" muted playsinline>
+        <source src="btwts.webm" type="video/webm">
+      </video>
+
+      <div class="message fadeOut" data-timehide="7.5">
+        <div class="messageText" style="flex: 1 1"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(async () => {
+  const decodeEntities = (() => {
+    const el = document.createElement('textarea')
+    return text => { el.innerHTML = text; return el.textContent }
+  })()
+
+  const config = loadConfig();
+  const slots = [
+    {
+      id: "#alert",
+      events: {
+        messageRender: (payment) => {
+          const message = [`${payment.sats.toLocaleString()} sats from ${decodeEntities(payment.sender_name)}`];
+          // if (payment.message) {
+          //   message.push(`"${decodeEntities(payment.message)}"`);
+          // }
+          return message;
+        },
+      },
+    },
+  ]
+  startAlerts({
+    slots,
+    ...config,
+  })
+})()
+</script>
+</body>
+</html>
