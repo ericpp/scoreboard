@@ -8,6 +8,7 @@ function loadConfig() {
     "podcasts": [
       "Between The Sch3m3s",
       "Behind the SchƎmƎs",
+      "Unknown",
       ""
     ],
     "eventGuids": ["c9f4790d-3fd2-4b1b-819d-aa70a976c0c4"],
