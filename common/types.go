@@ -24,13 +24,13 @@ type NWCPayment struct {
 type IncomingInvoice struct {
 	Amount       float64          `json:"amount"`
 	Boostagram   *Boostagram      `json:"boostagram"`
-	Comment      string           `json:"comment"`
+	Comment      string           `json:"comment"` // lnurl comment
 	CreatedAt    string           `json:"created_at"`
 	CreationDate float64          `json:"creation_date"`
-	Description  string           `json:"description"`
+	Description  string           `json:"description"` // invoice description
 	Identifier   string           `json:"identifier"`
 	Metadata     *InvoiceMetadata `json:"metadata"`
-	PayerName    string           `json:"payer_name"`
+	PayerName    string           `json:"payer_name"` // lnurl payer name
 	PaymentHash  string           `json:"payment_hash"`
 	Type         string           `json:"type"`
 	Value        float64          `json:"value"`
