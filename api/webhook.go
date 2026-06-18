@@ -30,17 +30,34 @@ var nostrRelays = []string{
 }
 
 type IncomingInvoice struct {
-	Amount       float64     `json:"amount"`
-	Boostagram   *Boostagram `json:"boostagram"`
-	Comment      string      `json:"comment"`
-	CreatedAt    string      `json:"created_at"`
-	CreationDate float64     `json:"creation_date"`
-	Description  string      `json:"description"`
-	Identifier   string      `json:"identifier"`
-	PayerName    string      `json:"payer_name"`
-	PaymentHash  string      `json:"payment_hash"`
-	Value        float64     `json:"value"`
-	RSSPayment   *RssPayment // parsed from comment
+	Amount       float64          `json:"amount"`
+	Boostagram   *Boostagram      `json:"boostagram"`
+	Comment      string           `json:"comment"`
+	CreatedAt    string           `json:"created_at"`
+	CreationDate float64          `json:"creation_date"`
+	Description  string           `json:"description"`
+	Identifier   string           `json:"identifier"`
+	Metadata     *InvoiceMetadata `json:"metadata"`
+	PayerName    string           `json:"payer_name"`
+	PaymentHash  string           `json:"payment_hash"`
+	Value        float64          `json:"value"`
+	RSSPayment   *RssPayment      // parsed from comment
+}
+
+type InvoiceMetadata struct {
+	Comment    string             `json:"comment"`
+	PayerData  *InvoicePayerData  `json:"payer_data"`
+	TLVRecords []InvoiceTLVRecord `json:"tlv_records"`
+}
+
+type InvoicePayerData struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+type InvoiceTLVRecord struct {
+	Type  int64  `json:"type"`
+	Value string `json:"value"`
 }
 
 type NostrRecord struct {
@@ -79,6 +96,16 @@ func ParseInvoiceFromJson(payload []byte) (IncomingInvoice, error) {
 
 	if err := json.Unmarshal(payload, &invoice); err != nil {
 		return IncomingInvoice{}, fmt.Errorf("failed to unmarshal payload: %w", err)
+	}
+
+	if invoice.Metadata != nil {
+		if invoice.Metadata.Comment != "" {
+			invoice.Comment = invoice.Metadata.Comment
+		}
+
+		if invoice.Metadata.PayerData != nil && invoice.Metadata.PayerData.Name != "" {
+			invoice.PayerName = invoice.Metadata.PayerData.Name
+		}
 	}
 
 	return invoice, nil
@@ -134,16 +161,17 @@ func (i IncomingInvoice) GetSerializedMetadata() ([]byte, error) {
 func (i IncomingInvoice) GetNostrRecord() NostrRecord {
 	boostagram := i.GetBoostagram()
 
-	return NostrRecord {
-		Amount: i.Amount,
-		Boostagram: &boostagram,
-		Comment: i.Comment,
-		CreatedAt: i.CreatedAt,
+	return NostrRecord{
+		Amount:       i.Amount,
+		Boostagram:   &boostagram,
+		Comment:      i.Comment,
+		CreatedAt:    i.CreatedAt,
 		CreationDate: i.CreationDate,
-		Description: i.Description,
-		Identifier: i.Identifier,
-		PayerName: i.PayerName,
-		Value: i.Value,
+		Description:  i.Description,
+		Identifier:   i.Identifier,
+		PayerName:    i.PayerName,
+		PaymentHash:  i.PaymentHash,
+		Value:        i.Value,
 	}
 }
 

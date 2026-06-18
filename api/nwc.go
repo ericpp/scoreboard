@@ -31,38 +31,39 @@ var nostrRelays = []string{
 }
 
 type WebhookPayload struct {
-	Type    string              `json:"type"`
-	Payment PaymentNotification `json:"payment"`
-}
-
-type PaymentNotification struct {
-	Type            string                 `json:"type"`
-	State           *string                `json:"state"`
-	Invoice         *string                `json:"invoice"`
-	Description     *string                `json:"description"`
-	DescriptionHash *string                `json:"description_hash"`
-	Preimage        *string                `json:"preimage"`
-	PaymentHash     string                 `json:"payment_hash"`
-	Amount          int64                  `json:"amount"`
-	FeesPaid        int64                  `json:"fees_paid"`
-	CreatedAt       int64                  `json:"created_at"`
-	ExpiresAt       *int64                 `json:"expires_at"`
-	SettledAt       *int64                 `json:"settled_at"`
-	Metadata        map[string]interface{} `json:"metadata"`
+	Type    string           `json:"type"`
+	Payment *IncomingInvoice `json:"payment"`
 }
 
 type IncomingInvoice struct {
-	Amount       float64     `json:"amount"`
-	Boostagram   *Boostagram `json:"boostagram"`
-	Comment      string      `json:"comment"`
-	CreatedAt    string      `json:"created_at"`
-	CreationDate float64     `json:"creation_date"`
-	Description  string      `json:"description"`
-	Identifier   string      `json:"identifier"`
-	PayerName    string      `json:"payer_name"`
-	PaymentHash  string      `json:"payment_hash"`
-	Value        float64     `json:"value"`
-	RSSPayment   *RssPayment // parsed from comment
+	Amount       float64          `json:"amount"`
+	Boostagram   *Boostagram      `json:"boostagram"`
+	Comment      string           `json:"comment"`
+	CreatedAt    string           `json:"created_at"`
+	CreationDate float64          `json:"creation_date"`
+	Description  string           `json:"description"`
+	Identifier   string           `json:"identifier"`
+	Metadata     *InvoiceMetadata `json:"metadata"`
+	PayerName    string           `json:"payer_name"`
+	PaymentHash  string           `json:"payment_hash"`
+	Value        float64          `json:"value"`
+	RSSPayment   *RssPayment      // parsed from comment
+}
+
+type InvoiceMetadata struct {
+	Comment    string             `json:"comment"`
+	PayerData  *InvoicePayerData  `json:"payer_data"`
+	TLVRecords []InvoiceTLVRecord `json:"tlv_records"`
+}
+
+type InvoicePayerData struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+type InvoiceTLVRecord struct {
+	Type  int64  `json:"type"`
+	Value string `json:"value"`
 }
 
 type NostrRecord struct {
@@ -97,54 +98,19 @@ type Boostagram struct {
 }
 
 func ParsePaymentNotification(payload []byte) (IncomingInvoice, error) {
-	var webhook WebhookPayload
+	var invoice IncomingInvoice
 
-	if err := json.Unmarshal(payload, &webhook); err != nil {
-		return IncomingInvoice{}, fmt.Errorf("failed to unmarshal webhook payload: %w", err)
+	if err := json.Unmarshal(payload, &invoice); err != nil {
+		return IncomingInvoice{}, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
-	if webhook.Type != "payment_received" {
-		return IncomingInvoice{}, fmt.Errorf("unsupported webhook type: %s", webhook.Type)
-	}
+	if invoice.Metadata != nil {
+		if invoice.Metadata.Comment != "" {
+			invoice.Comment = invoice.Metadata.Comment
+		}
 
-	notification := webhook.Payment
-
-	if notification.Type != "incoming" {
-		return IncomingInvoice{}, fmt.Errorf("unsupported payment type: %s", notification.Type)
-	}
-
-	invoice := IncomingInvoice{
-		Amount:       float64(int(notification.Amount / 1000)),
-		Value:        float64(int(notification.Amount / 1000)),
-		Identifier:   notification.PaymentHash,
-		CreatedAt:    time.Unix(notification.CreatedAt, 0).Format(time.RFC3339),
-		CreationDate: float64(notification.CreatedAt),
-	}
-
-	if notification.Description != nil {
-		invoice.Description = *notification.Description
-	}
-
-	if notification.Metadata != nil {
-		if tlvRecords, ok := notification.Metadata["tlv_records"].([]interface{}); ok && len(tlvRecords) > 0 {
-			for _, record := range tlvRecords {
-				if recordMap, ok := record.(map[string]interface{}); ok {
-					typeNum, _ := recordMap["type"].(float64)
-					if int64(typeNum) == 7629169 {
-						if hexValue, ok := recordMap["value"].(string); ok {
-							boostagram, err := parseBoostagramFromHex(hexValue)
-							if err != nil {
-								log.Printf("failed to parse boostagram from hex: %v", err)
-								continue
-							}
-							invoice.Boostagram = &boostagram
-							invoice.Comment = boostagram.Message
-							invoice.PayerName = boostagram.SenderName
-							break
-						}
-					}
-				}
-			}
+		if invoice.Metadata.PayerData != nil && invoice.Metadata.PayerData.Name != "" {
+			invoice.PayerName = invoice.Metadata.PayerData.Name
 		}
 	}
 
