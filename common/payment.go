@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const PodcastTLVType int64 = 7629169
+
 func ParsePaymentNotification(payload []byte) (IncomingInvoice, error) {
 	var notification PaymentNotification
 
@@ -47,9 +49,8 @@ func ParsePaymentNotification(payload []byte) (IncomingInvoice, error) {
 		CreatedAt:    time.Unix(payment.CreatedAt, 0).UTC().Format(time.RFC3339),
 	}
 
-	applyInvoiceMetadata(&invoice)
-	if invoice.Comment == "" {
-		invoice.Comment = payment.Description
+	if err := applyInvoiceMetadata(&invoice); err != nil {
+		return IncomingInvoice{}, fmt.Errorf("failed to apply invoice metadata: %w", err)
 	}
 
 	return invoice, nil
@@ -62,13 +63,16 @@ func ParseInvoiceFromJson(payload []byte) (IncomingInvoice, error) {
 		return IncomingInvoice{}, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
-	applyInvoiceMetadata(&invoice)
+	if err := applyInvoiceMetadata(&invoice); err != nil {
+		return IncomingInvoice{}, fmt.Errorf("failed to apply invoice metadata: %w", err)
+	}
+
 	return invoice, nil
 }
 
-func applyInvoiceMetadata(invoice *IncomingInvoice) {
+func applyInvoiceMetadata(invoice *IncomingInvoice) error {
 	if invoice.Metadata == nil {
-		return
+		return nil
 	}
 
 	if invoice.Metadata.Comment != "" {
@@ -78,6 +82,18 @@ func applyInvoiceMetadata(invoice *IncomingInvoice) {
 	if invoice.Metadata.PayerData != nil && invoice.Metadata.PayerData.Name != "" {
 		invoice.PayerName = invoice.Metadata.PayerData.Name
 	}
+
+	for _, record := range invoice.Metadata.TLVRecords {
+		if record.Type == PodcastTLVType {
+			boostagram, err := ParseBoostagramFromHex(record.Value)
+			if err != nil {
+				return fmt.Errorf("failed to parse boostagram from hex: %w", err)
+			}
+			invoice.Boostagram = &boostagram
+		}
+	}
+
+	return nil
 }
 
 func ParseBoostagramFromHex(hexValue string) (Boostagram, error) {
