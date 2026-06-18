@@ -38,6 +38,7 @@ type IncomingInvoice struct {
 	Description  string      `json:"description"`
 	Identifier   string      `json:"identifier"`
 	PayerName    string      `json:"payer_name"`
+	PaymentHash  string      `json:"payment_hash"`
 	Value        float64     `json:"value"`
 	RSSPayment   *RssPayment // parsed from comment
 }
@@ -51,6 +52,7 @@ type NostrRecord struct {
 	Description  string      `json:"description"`
 	Identifier   string      `json:"identifier"`
 	PayerName    string      `json:"payer_name"`
+	PaymentHash  string      `json:"payment_hash"`
 	Value        float64     `json:"value"`
 }
 
@@ -263,20 +265,20 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 		return err
 	}
 
-	log.Printf("inserting %s", invoice.Identifier)
+	log.Printf("inserting %s", invoice.PaymentHash)
 
 	serializedMetadata, err := invoice.GetSerializedMetadata()
 	if err != nil {
-		log.Printf("failed to serialize boostagram for invoice %s: %v", invoice.Identifier, err)
+		log.Printf("failed to serialize boostagram for invoice %s: %v", invoice.PaymentHash, err)
 	}
 
 	boostagram := invoice.GetBoostagram()
 	insertSql :=
 		`INSERT INTO invoices
-        (amount, boostagram, comment, created_at, creation_date, description, identifier, payer_name, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action, event_guid)
+        (amount, boostagram, comment, created_at, creation_date, description, identifier, payer_name, payment_hash, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action, event_guid)
     VALUES
         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-    ON CONFLICT (identifier) DO NOTHING`
+    ON CONFLICT (payment_hash) DO NOTHING`
 
 	_, err = db.Exec(
 		insertSql,
@@ -288,6 +290,7 @@ func SaveToDatabase(invoice IncomingInvoice) error {
 		invoice.Description,
 		invoice.Identifier,
 		invoice.PayerName,
+		invoice.PaymentHash,
 		invoice.Value,
 		boostagram.Podcast,
 		boostagram.Episode,
@@ -329,11 +332,11 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
 		return err
 	}
 
-	log.Printf("updating %s with RSS payment info", invoice.Identifier)
+	log.Printf("updating %s with RSS payment info", invoice.PaymentHash)
 
 	serializedMetadata, err := invoice.GetSerializedMetadata()
 	if err != nil {
-		log.Printf("failed to serialize boostagram for invoice %s: %v", invoice.Identifier, err)
+		log.Printf("failed to serialize boostagram for invoice %s: %v", invoice.PaymentHash, err)
 		return err
 	}
 
@@ -353,7 +356,7 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
         episode_guid = $11,
         action = $12,
         event_guid = $13
-    WHERE identifier = $14`
+    WHERE payment_hash = $14`
 
 	_, err = db.Exec(
 		updateSql,
@@ -370,7 +373,7 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
 		boostagram.EpisodeGuid,
 		boostagram.Action,
 		boostagram.EventGuid,
-		invoice.Identifier,
+		invoice.PaymentHash,
 	)
 
 	if err != nil {
