@@ -57,15 +57,21 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := common.FetchRSSPaymentIfNeeded(&invoice); err != nil {
-		log.Printf("failed to fetch RSS payment: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if err := common.FetchPodcastGuruPaymentIfNeeded(&invoice); err != nil {
+		log.Printf("failed to fetch PodcastGuru payment: %v", err)
 	}
 
-	if invoice.RSSPayment != nil {
+	if invoice.PodcastGuruPayment == nil {
+		if err := common.FetchRSSPaymentIfNeeded(&invoice); err != nil {
+			log.Printf("failed to fetch RSS payment: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if invoice.RSSPayment != nil || invoice.PodcastGuruPayment != nil {
 		if err := common.UpdateDatabaseWithRSSPayment(invoice); err != nil {
-			log.Printf("failed to update database with RSS payment: %v", err)
+			log.Printf("failed to update database with payment metadata: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

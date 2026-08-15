@@ -115,6 +115,10 @@ func (i IncomingInvoice) GetBoostagram() Boostagram {
 		return *i.Boostagram
 	}
 
+	if i.PodcastGuruPayment != nil {
+		return i.PodcastGuruPayment.ParseBoostagram()
+	}
+
 	if i.RSSPayment != nil {
 		return i.RSSPayment.ParseBoostagram()
 	}
@@ -127,6 +131,8 @@ func (i IncomingInvoice) GetSerializedMetadata() ([]byte, error) {
 
 	if i.Boostagram != nil {
 		metadata = i.Boostagram
+	} else if i.PodcastGuruPayment != nil {
+		metadata = i.PodcastGuruPayment
 	} else if i.RSSPayment != nil {
 		metadata = i.RSSPayment
 	}

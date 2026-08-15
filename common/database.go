@@ -92,7 +92,7 @@ func saveInvoice(invoice IncomingInvoice) (bool, error) {
 }
 
 func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
-	if invoice.RSSPayment == nil {
+	if invoice.RSSPayment == nil && invoice.PodcastGuruPayment == nil {
 		return nil
 	}
 
@@ -102,7 +102,11 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
 	}
 	defer db.Close()
 
-	log.Printf("updating %s with RSS payment info", invoice.PaymentHash)
+	paymentType := "RSS payment"
+	if invoice.PodcastGuruPayment != nil {
+		paymentType = "PodcastGuru payment"
+	}
+	log.Printf("updating %s with %s info", invoice.PaymentHash, paymentType)
 
 	serializedMetadata, err := invoice.GetSerializedMetadata()
 	if err != nil {

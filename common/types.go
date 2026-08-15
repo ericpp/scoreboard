@@ -34,7 +34,8 @@ type IncomingInvoice struct {
 	PaymentHash  string           `json:"payment_hash"`
 	Type         string           `json:"type"`
 	Value        float64          `json:"value"`
-	RSSPayment   *RssPayment
+	RSSPayment         *RssPayment
+	PodcastGuruPayment *PodcastGuruPayment
 }
 
 type InvoiceMetadata struct {
@@ -110,6 +111,40 @@ type RssPayment struct {
 	ValueMsat           float64 `json:"value_msat"`
 	ValueMsatTotal      float64 `json:"value_msat_total"`
 	ValueUsd            float64 `json:"value_usd"`
+}
+
+type PodcastGuruPayment struct {
+	BoostAmount     string               `json:"boost_amount"`
+	BoostCurrency   string               `json:"boost_currency"`
+	BoostHash       string               `json:"boost_hash"`
+	BoostId         int                  `json:"boost_id"`
+	CreatedAt       int64                `json:"created_at"`
+	EpisodeId       *string              `json:"episode_id"`
+	MetadataPayload string               `json:"metadata_payload"`
+	PodcastId       string               `json:"podcast_id"`
+	SenderId        string               `json:"sender_id"`
+	URL             string               `json:"url"`
+	ParsedMetadata  *PodcastGuruMetadata `json:"-"`
+}
+
+type PodcastGuruMetadata struct {
+	Podcast        string  `json:"podcast"`
+	Episode        string  `json:"episode"`
+	EpisodeGuid    string  `json:"episode_guid"`
+	AppName        string  `json:"app_name"`
+	AppVersion     string  `json:"app_version"`
+	TotalAmount    float64 `json:"total_amount"`
+	Currency       string  `json:"currency"`
+	Speed          string  `json:"speed"`
+	Ts             int     `json:"ts"`
+	URL            string  `json:"url"`
+	Guid           string  `json:"guid"`
+	SenderId       string  `json:"sender_id"`
+	Message        string  `json:"message"`
+	Action         string  `json:"action"`
+	SenderName     string  `json:"sender_name"`
+	ValueMsatTotal int     `json:"value_msat_total"`
+	BoostLink      string  `json:"boost_link"`
 }
 
 type HelipadPaymentInfo struct {
