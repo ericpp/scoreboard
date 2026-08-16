@@ -140,6 +140,27 @@ func TestFetchRSSPaymentIfNeededSkipsWhenAlreadyPresent(t *testing.T) {
 	}
 }
 
+func TestFetchRSSPaymentWithClientFloatPosition(t *testing.T) {
+	t.Parallel()
+
+	rssJSON := `{"action":"boost","feed_title":"Test Feed","position":1234.9}`
+	encoded := url.QueryEscape(rssJSON)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("x-rss-payment", encoded)
+	}))
+	defer server.Close()
+
+	got, err := FetchRSSPaymentWithClient(server.Client(), server.URL)
+	if err != nil {
+		t.Fatalf("FetchRSSPaymentWithClient() error = %v", err)
+	}
+
+	if got.Position != 1234 {
+		t.Errorf("Position = %d, want 1234", got.Position)
+	}
+}
+
 func TestRssPaymentParseBoostagram(t *testing.T) {
 	t.Parallel()
 
