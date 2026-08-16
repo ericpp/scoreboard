@@ -1,5 +1,22 @@
 package common
 
+import (
+	"encoding/json"
+	"math"
+)
+
+// FlooredInt unmarshals JSON numbers as int, flooring fractional values.
+type FlooredInt int
+
+func (f *FlooredInt) UnmarshalJSON(data []byte) error {
+	var n float64
+	if err := json.Unmarshal(data, &n); err != nil {
+		return err
+	}
+	*f = FlooredInt(int(math.Floor(n)))
+	return nil
+}
+
 type PaymentNotification struct {
 	Type    string     `json:"type"`
 	Payment *NWCPayment `json:"payment"`
@@ -96,7 +113,7 @@ type RssPayment struct {
 	ItemTitle           string  `json:"item_title"`
 	Link                string  `json:"link"`
 	Message             string  `json:"message"`
-	Position            int     `json:"position"`
+	Position            FlooredInt `json:"position"`
 	PublisherGuid       string  `json:"publisher_guid"`
 	PublisherTitle      string  `json:"publisher_title"`
 	RecipientAddress    string  `json:"recipient_address"`
