@@ -2,7 +2,14 @@
 function PaymentTracker(config) {
   config = config || {}
 
-  this.relays = config.relays || ["wss://relay.damus.io", "wss://nos.lol"]
+  this.relays = config.relays || [
+    "wss://relay.damus.io",
+    "wss://nos.lol",
+    "wss://cache1.primal.net/v1",
+    "wss://cache2.primal.net/v1",
+    "wss://nostr.wine/",
+    "wss://us.nostr.wine/",
+  ]
 
   this.nostrBoostPkey = config.nostrBoostPkey || null
   this.nostrZapEvent = config.nostrZapEvent || null
@@ -189,7 +196,7 @@ function NostrWatcher(relays) {
 
     nostrPubkey = this.parsePubkey(nostrPubkey)
 
-    this.nostrPool.subscribeMany(this.nostrRelays, [{authors: [nostrPubkey]}], {
+    this.nostrPool.subscribeMany(this.nostrRelays, {authors: [nostrPubkey]}, {
       async onevent(event) {
         invoice = JSON.parse(event.content)
 
@@ -237,7 +244,7 @@ function NostrWatcher(relays) {
 
     nostrActivity = this.parseActivity(nostrActivity)
 
-    this.nostrPool.subscribeMany(this.nostrRelays, [{'#a': [nostrActivity], 'kinds': [9735]}], {
+    this.nostrPool.subscribeMany(this.nostrRelays, {'#a': [nostrActivity], 'kinds': [9735]}, {
       async onevent(event) {
         if (isOldTimeout) {
           clearTimeout(isOldTimeout)
