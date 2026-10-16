@@ -105,7 +105,6 @@ body {
     const base = "https://r2.ericpp.dev/pixelpalace"
     const triggers = [
       { threshold: 100000, every: 100000, src: `${base}/100k.webm` },
-      { threshold: 75000, every: 100000, src: `${base}/75k.webm` },
       { threshold: 50000, every: 100000, src: `${base}/50k.webm` },
       { threshold: 25000, every: 100000, src: `${base}/25k.webm` },
       ...[...Array(10).keys()].map(d => ({ endsWith: String(d), src: `${base}/${d}.webm` })),
