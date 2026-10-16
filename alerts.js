@@ -97,12 +97,24 @@ class AlertSlot {
     this.alert.onTimeUpdate(this.handleTimeUpdate.bind(this))
   }
 
+  crossedThreshold(trig, payment, isReplay) {
+    if (!trig.threshold || isReplay) return false
+    if (payment.satTotal < trig.threshold) return false
+
+    if (!trig.every) {
+      return payment.lastSatTotal < trig.threshold
+    }
+
+    const step = (total) => Math.floor((total - trig.threshold) / trig.every)
+    return step(payment.satTotal) > step(payment.lastSatTotal)
+  }
+
   pickImage(payment, isReplay) {
     if (this.triggers.length) {
       const strSats = String(payment.sats)
 
       const img = this.triggers.find(trig =>
-        (trig.threshold && payment.satTotal >= trig.threshold && payment.lastSatTotal < trig.threshold && !isReplay) ||
+        this.crossedThreshold(trig, payment, isReplay) ||
         (trig.endsWith && strSats.endsWith(trig.endsWith)) ||
         (trig.contains && strSats.includes(trig.contains))
       )

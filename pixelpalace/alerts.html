@@ -1,0 +1,163 @@
+<html>
+<head>
+<title>Alerts</title>
+
+<link href="../alerts.css" rel="stylesheet">
+
+<script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+<script src="../tracker.js"></script>
+<script src="../alerts.js"></script>
+
+<style>
+@font-face {
+    font-family: 'pokemon-font';
+    src: url('pokemon-font.woff2') format('woff2'),
+         url('pokemon-font.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'pokemon-font', monospace;
+  font-size: 32px;
+  color: #fff;
+  text-shadow: 3px 3px 0 #000;
+  line-height: 1.4;
+  -webkit-font-smoothing: none;
+}
+
+.stage {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(min(100vw / 1920px, 100vh / 1080px));
+}
+
+#alert {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+
+#alert .messageFlex,
+#alert video.background {
+  width: 1920px;
+  height: 1080px;
+}
+
+#alert video.background {
+  display: block;
+}
+
+.message {
+  width: 1100px;
+  aspect-ratio: 296.19 / 112;
+  left: 400px;
+  bottom: 340px;
+  box-sizing: border-box;
+  background: url("alerts/bubble.svg") center / 100% 100% no-repeat;
+  color: #1a1a1a;
+  text-shadow: none;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.messageText {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 70px 64px 175px 64px;
+  line-height: 1.25;
+  white-space: pre-line;
+  text-align: left;
+}
+</style>
+</head>
+
+<body>
+
+<div class="stage">
+  <div id="alert" class="alert">
+    <div class="messageFlex">
+      <video class="background" muted playsinline>
+        <source src="" type="video/webm">
+      </video>
+      <div class="message" data-timeshow="2">
+        <div class="messageText" style="flex: 1 1"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (async () => {
+    const base = "https://r2.ericpp.dev/pixelpalace"
+    const triggers = [
+      { threshold: 100000, every: 100000, src: `${base}/100k.webm` },
+      { threshold: 75000, every: 100000, src: `${base}/75k.webm` },
+      { threshold: 50000, every: 100000, src: `${base}/50k.webm` },
+      { threshold: 25000, every: 100000, src: `${base}/25k.webm` },
+      ...[...Array(10).keys()].map(d => ({ endsWith: String(d), src: `${base}/${d}.webm` })),
+    ]
+
+    let typer = null
+
+    function typeText(el, text) {
+      clearInterval(typer)
+      el.textContent = ""
+      const delay = Math.min(30, 3000 / Math.max(text.length, 1))
+      let i = 0
+      typer = setInterval(() => {
+        el.textContent = text.slice(0, ++i)
+        if (i >= text.length) clearInterval(typer)
+      }, delay)
+    }
+
+    const events = {
+      messageRender: () => [],
+
+      messageShow: (payment) => {
+        const boost = payment.type == 'boost' ? 'boosted' : 'zapped'
+        let text = `${payment.sender_name} ${boost} ${payment.sats.toLocaleString()} sats via ${payment.app_name}`
+        if (payment.message) text += `\n${payment.message}`
+        typeText(document.querySelector(".messageText"), text)
+      },
+
+      messageHide: () => {
+        clearInterval(typer)
+      },
+    }
+
+    // TODO: replace with the pixelpalace podcast, episode, and event ids
+    const filters = {
+      podcasts: ["TODO"],
+      episodeGuids: ["TODO"],
+      eventGuids: ["TODO"],
+      after: "2026-01-01 00:00:00",
+    }
+    startAlerts({
+      slots: [{
+        id: "#alert",
+        triggers,
+        events,
+      }],
+      loadZaps: false,
+      loadBoosts: false,
+      ...filters,
+    })
+  })()
+  </script>
+
+</body>
+</html>
