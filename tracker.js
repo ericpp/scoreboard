@@ -11,9 +11,11 @@ class PaymentTracker {
     this.nostrZapEvent = config.nostrZapEvent || null
     this.nostrZapNpubs = config.nostrZapNpubs || []
     this.lnzapPkeys = config.lnzapPkeys || []
+    this.lnzapNostrEvent = config.lnzapNostrEvent || null
     this.lnzapEventGuids = config.lnzapEventGuids || []
     this.loadBoosts = config.loadBoosts ?? true
     this.loadZaps = config.loadZaps ?? true
+    this.loadLnzaps = config.loadLnzaps ?? true
     this.maxIdentifiers = config.maxIdentifiers || 10000 // Configurable memory limit
     this.filters = {}
     this.identifiers = []
@@ -118,6 +120,7 @@ class PaymentTracker {
   subscribeLnzaps() {
     this.nostrWatcher.subscribeLnzaps(
       this.lnzapPkeys,
+      this.lnzapNostrEvent,
       this.lnzapEventGuids,
       this.filters.after,
       (item) => {
@@ -221,6 +224,7 @@ class PaymentTracker {
     // Skip old items if loading is disabled for that type
     if (payment.isOld && payment.type === 'boost' && !this.loadBoosts) return
     if (payment.isOld && payment.type === 'zap' && !this.loadZaps) return
+    if (payment.isOld && payment.type === 'lnzap' && !this.loadLnzaps) return
 
     // Skip invalid or duplicate payments
     if (!payment.sats || isNaN(payment.sats)) return
@@ -579,18 +583,28 @@ class NostrWatcher {
     }, () => this.subscribeMultiNostrZaps(nostrActivities, callback, subscriptionId))
   }
 
-  subscribeLnzaps(pubkeys, eventGuids, since, callback, subscriptionId) {
+  subscribeLnzaps(pubkeys, nostrActivities, eventGuids, since, callback, subscriptionId) {
     if (this.destroyed) return
-
-    const parsedPubkeys = pubkeys.map(pubkey => this.parsePubkey(pubkey)).filter(Boolean)
-    if (!parsedPubkeys.length) return
 
     if (!subscriptionId) subscriptionId = `lnzaps-${this.subscriptionCount++}`
     const allowed = new Set(eventGuids || [])
     const filters = {
       'kinds': [9735],
-      '#p': parsedPubkeys,
     }
+
+    if (pubkeys) {
+      filters['#p'] = pubkeys.map(pubkey => this.parsePubkey(pubkey))
+    }
+
+    if (nostrActivities) {
+      filters['#a'] = nostrActivities.map(activity => this.parseActivity(activity))
+    }
+
+    if (!filters['#p'].length && !filters['#a'].length) {
+      console.warn('No pubkeys or activities provided')
+      return
+    }
+
     if (since) filters.since = since
 
     this.subscribeEvents(subscriptionId, filters, async (event, getIsOld) => {
@@ -627,13 +641,13 @@ class NostrWatcher {
       const message = await this.resolveNostrReferences(zapRequest.content)
 
       callback({
-        type: 'zap',
-        action: 'zap',
+        type: 'lnzap',
+        action: 'lnzap',
         identifier: event.id,
         creation_date: event.created_at,
         sender_name: senderName || 'Anonymous',
         picture,
-        app_name: 'Lightning',
+        app_name: 'Lightning Payment',
         podcast: this.tagWithPrefix(requestTags, 'i', 'podcast:guid:'),
         event_guid: eventGuid,
         episode_guid: this.tagWithPrefix(requestTags, 'i', 'podcast:item:guid:'),
@@ -642,7 +656,7 @@ class NostrWatcher {
         message,
         isOld: getIsOld(),
       })
-    }, () => this.subscribeLnzaps(pubkeys, eventGuids, since, callback, subscriptionId))
+    }, () => this.subscribeLnzaps(pubkeys, nostrActivities, eventGuids, since, callback, subscriptionId))
   }
 
   getNostrProfile(pubkey) {

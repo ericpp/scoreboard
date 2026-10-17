@@ -128,7 +128,7 @@ body {
 
       messageShow: (payment) => {
         const verb = payment.type == 'boost' ? 'boosted'
-          : payment.app_name == 'Lightning' ? 'sent'
+          : payment.type == 'lnzap' ? 'sent'
           : 'zapped'
         let text = `${payment.sender_name} ${verb} ${payment.sats.toLocaleString()} sats via ${payment.app_name}`
         if (payment.message) text += `\n${payment.message}`

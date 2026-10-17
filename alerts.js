@@ -235,6 +235,7 @@ async function startAlerts(config = {}) {
   config = {
     loadBoosts: false,
     loadZaps: false,
+    loadLnzaps: false,
     showMessages: false,
     nostrBoostPkey: "npub1sp8w4t66l3nu46d22zn2uq6hrtnf8l9jw775p4jtje439h96yh8qzmpw6q",
     excludePodcasts: ["Podcasting 2.0"],
@@ -258,7 +259,7 @@ async function startAlerts(config = {}) {
   function paymentReceived(payment) {
     satTotal = satTotal + payment.sats
 
-    if (payment.action !== 'boost' && payment.type !== 'zap') {
+    if (payment.action !== 'boost' && payment.type !== 'zap' && payment.type !== 'lnzap') {
       return // filter out streams
     }
 
@@ -343,6 +344,7 @@ async function startAlerts(config = {}) {
 
     if (url.loadBoosts) app.loadBoosts = true
     if (url.loadZaps) app.loadZaps = true
+    if (url.loadLnzaps) app.loadLnzaps = true
 
     if (url.test) {
       paymentReceived({
@@ -365,11 +367,13 @@ async function startAlerts(config = {}) {
 
       app.loadBoosts = true
       app.loadZaps = true
+      app.loadLnzaps = true
     }
 
     if (url.replay) {
       app.loadBoosts = true
       app.loadZaps = true
+      app.loadLnzaps = true
     }
 
     setInterval(handleAlertQueue, 1000)
