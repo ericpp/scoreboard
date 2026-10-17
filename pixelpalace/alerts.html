@@ -165,6 +165,13 @@ body {
       discoball: "effects/discoball.png",
     }
 
+    const preloadedEffects = Object.values(effectIcons).map(src => {
+      const img = new Image()
+      img.src = src
+      img.decode?.().catch(() => {})
+      return img
+    })
+
     const events = {
       messageRender: () => [],
 
