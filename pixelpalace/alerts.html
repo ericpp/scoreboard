@@ -83,35 +83,21 @@ body {
   text-align: left;
 }
 
-.effectImage {
-  display: none;
-}
-
 .message.effect {
   width: auto;
+  max-width: 900px;
   aspect-ratio: auto;
   left: 50%;
   bottom: 260px;
   transform: translateX(-50%);
   background: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
   color: #fff;
   text-shadow: 3px 3px 0 #000;
 }
 
-.message.effect .effectImage {
-  display: block;
-  height: 320px;
-  width: auto;
-  image-rendering: pixelated;
-}
-
 .message.effect .messageText {
   width: auto;
-  max-width: 900px;
-  padding: 18px 0 0;
+  padding: 0;
   text-align: center;
 }
 </style>
@@ -126,7 +112,6 @@ body {
         <source src="" type="video/webm">
       </video>
       <div class="message" data-timeshow="2">
-        <img class="effectImage" alt="">
         <div class="messageText" style="flex: 1 1"></div>
       </div>
     </div>
@@ -156,44 +141,35 @@ body {
       }, delay)
     }
 
-    const effectIcons = {
-      wide: "effects/telescope.png",
-      bubbles: "effects/bubbles.png",
-      fence: "effects/fence.png",
-      dj: "effects/dj.png",
-      festoons: "effects/festoons.png",
-      discoball: "effects/discoball.png",
+    const effectLabels = {
+      wide: "Wide Pan",
+      bubbles: "Bubbles",
+      fence: "Pixel Curtain Fence",
+      dj: "DJ",
+      festoons: "Festoons",
+      discoball: "Disco Ball",
     }
-
-    const preloadedEffects = Object.values(effectIcons).map(src => {
-      const img = new Image()
-      img.src = src
-      img.decode?.().catch(() => {})
-      return img
-    })
 
     const events = {
       messageRender: () => [],
 
       messageShow: (payment) => {
         const box = document.querySelector(".message")
-        const image = box.querySelector(".effectImage")
 
-        if (payment.type === 'effect' && effectIcons[payment.effect_id]) {
-          clearInterval(typer)
-          box.classList.add("effect")
-          image.src = effectIcons[payment.effect_id]
-          image.alt = payment.effect_label || payment.effect_id
-          let text = payment.sender_name || ""
-          if (payment.message && payment.message !== payment.effect_label) {
-            text += `\n${payment.message}`
+        if (payment.type === 'effect') {
+          const description = effectLabels[payment.effect_id] || payment.effect_label || payment.effect_id || "an effect"
+          const name = payment.sender_name || "Anonymous"
+          const lines = [`${name} triggered ${description}`]
+          if (payment.message && payment.message !== description) {
+            lines.push(payment.message)
           }
-          document.querySelector(".messageText").textContent = text
+          box.classList.add("effect")
+          clearInterval(typer)
+          box.querySelector(".messageText").textContent = lines.join("\n")
           return
         }
 
         box.classList.remove("effect")
-        image.removeAttribute("src")
 
         const verb = payment.type == 'boost' ? 'boosted'
           : payment.type == 'lnzap' ? 'sent'
@@ -205,9 +181,7 @@ body {
 
       messageHide: () => {
         clearInterval(typer)
-        const box = document.querySelector(".message")
-        box.classList.remove("effect")
-        box.querySelector(".effectImage").removeAttribute("src")
+        document.querySelector(".message").classList.remove("effect")
       },
     }
 
