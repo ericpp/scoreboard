@@ -127,8 +127,10 @@ body {
       messageRender: () => [],
 
       messageShow: (payment) => {
-        const boost = payment.type == 'boost' ? 'boosted' : 'zapped'
-        let text = `${payment.sender_name} ${boost} ${payment.sats.toLocaleString()} sats via ${payment.app_name}`
+        const verb = payment.type == 'boost' ? 'boosted'
+          : payment.app_name == 'Lightning' ? 'sent'
+          : 'zapped'
+        let text = `${payment.sender_name} ${verb} ${payment.sats.toLocaleString()} sats via ${payment.app_name}`
         if (payment.message) text += `\n${payment.message}`
         typeText(document.querySelector(".messageText"), text)
       },
@@ -151,6 +153,8 @@ body {
         triggers,
         events,
       }],
+      lnzapPkeys: ["npub1gfh3zdy07r37mgk4hyr0njmajapswk4ct6anc9w407uqkn39aslqqkalqc"],
+      lnzapEventGuids: ["c530c8eb-5e42-4daa-b00a-e31169935537"],
       loadZaps: false,
       loadBoosts: false,
       ...filters,

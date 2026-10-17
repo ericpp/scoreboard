@@ -10,6 +10,8 @@ class PaymentTracker {
     this.nostrBoostPkey = config.nostrBoostPkey || null
     this.nostrZapEvent = config.nostrZapEvent || null
     this.nostrZapNpubs = config.nostrZapNpubs || []
+    this.lnzapPkeys = config.lnzapPkeys || []
+    this.lnzapEventGuids = config.lnzapEventGuids || []
     this.loadBoosts = config.loadBoosts ?? true
     this.loadZaps = config.loadZaps ?? true
     this.maxIdentifiers = config.maxIdentifiers || 10000 // Configurable memory limit
@@ -72,6 +74,14 @@ class PaymentTracker {
     this.nostrZapNpubs = npubs
   }
 
+  setLnzapPkeys(pkeys) {
+    this.lnzapPkeys = pkeys
+  }
+
+  setLnzapEventGuids(guids) {
+    this.lnzapEventGuids = guids
+  }
+
   setListener(listener) {
     if (typeof listener !== 'function') {
       throw new Error('Listener must be a function')
@@ -98,22 +108,34 @@ class PaymentTracker {
     })
   }
 
-  subscribeZaps() {
-    this.nostrWatcher.subscribeZaps(this.nostrZapEvent, (item) => {
+  subscribeNostrZaps() {
+    this.nostrWatcher.subscribeNostrZaps(this.nostrZapEvent, (item) => {
       if (this.destroyed) return
       this.add(item)
     })
   }
 
-  async subscribeZapsForNpub() {
+  subscribeLnzaps() {
+    this.nostrWatcher.subscribeLnzaps(
+      this.lnzapPkeys,
+      this.lnzapEventGuids,
+      this.filters.after,
+      (item) => {
+        if (this.destroyed) return
+        this.add(item)
+      }
+    )
+  }
+
+  async subscribeNostrZapsForNpub() {
     if (!this.nostrZapNpubs.length) return
 
     const streams = await this.nostrWatcher.findStreams(this.nostrZapNpubs, this.filters.after)
 
     console.log(`Found ${streams.length} streams for ${this.nostrZapNpubs.join(', ')}`)
-    console.log(`Subscribing to zaps for streams: ${streams.join(', ')}`)
+    console.log(`Subscribing to nostr zaps for streams: ${streams.join(', ')}`)
 
-    this.nostrWatcher.subscribeMultiZaps(streams, (item) => {
+    this.nostrWatcher.subscribeMultiNostrZaps(streams, (item) => {
       if (this.destroyed) return
       this.add(item)
     })
@@ -138,11 +160,15 @@ class PaymentTracker {
       }
 
       if (this.nostrZapEvent) {
-        this.subscribeZaps()
+        this.subscribeNostrZaps()
       }
 
       if (this.nostrZapNpubs.length) {
-        await this.subscribeZapsForNpub()
+        await this.subscribeNostrZapsForNpub()
+      }
+
+      if (this.lnzapPkeys.length) {
+        this.subscribeLnzaps()
       }
     } catch (error) {
       console.error('Error starting PaymentTracker:', error)
@@ -442,22 +468,26 @@ class NostrWatcher {
   }
 
 
-  subscribeZaps(nostrActivity, callback) {
-    return this.subscribeMultiZaps([nostrActivity], callback)
+  tagsToMap(tags) {
+    return (tags || []).reduce((result, tag) => {
+      const [name, value] = tag
+      if (!name) return result
+      if (!result[name]) result[name] = []
+      result[name].push(value)
+      return result
+    }, {})
   }
 
-  subscribeMultiZaps(nostrActivities, callback) {
+  tagWithPrefix(tags, name, prefix) {
+    const value = (tags[name] || []).find(item => item?.startsWith(prefix))
+    return value ? value.slice(prefix.length) : null
+  }
+
+  subscribeEvents(subscriptionId, filters, onEvent, resubscribe) {
     if (this.destroyed) return
 
-    const subscriptionId = `zaps-${this.subscriptionCount++}`
-    const parsedActivities = nostrActivities.map(activity => this.parseActivity(activity))
     const { updateOldState, cleanup, getIsOld } = this.handleOldState()
     const self = this
-
-    const filters = {
-      '#a': parsedActivities,
-      'kinds': [9735],
-    }
 
     const sub = this.nostrPool.subscribeMany(this.nostrRelays, filters, {
       async onevent(event) {
@@ -465,50 +495,9 @@ class NostrWatcher {
 
         try {
           updateOldState()
-
-          // Convert tags array into an object
-          const tags = event.tags.reduce((result, tag) => {
-            const [name, value] = tag
-            if (!result[name]) result[name] = []
-            result[name].push(value)
-            return result
-          }, {})
-
-          if (!tags.description || !tags.bolt11) {
-            console.warn('Missing required tags in zap event')
-            return
-          }
-
-          // Process zap data
-          const zapRequest = JSON.parse(tags.description[0])
-          const value_msat_total = self.getMsatsFromBolt11(tags.bolt11[0])
-
-          if (!value_msat_total) {
-            console.warn('Could not parse sats from bolt11')
-            return
-          }
-
-          const profile = await self.getNostrProfile(zapRequest.pubkey)
-          const message = await self.resolveNostrReferences(event.content)
-
-          callback({
-            type: 'zap',
-            action: 'zap',
-            identifier: event.id,
-            creation_date: event.created_at,
-            sender_name: profile.display_name || profile.name || 'Anonymous',
-            picture: profile.picture || null,
-            app_name: 'Nostr',
-            podcast: 'Nostr',
-            event_guid: null,
-            episode_guid: null,
-            episode: null,
-            sats: Math.floor(value_msat_total / 1000),
-            message: message,
-            isOld: getIsOld(),
-          })
+          await onEvent(event, getIsOld)
         } catch (error) {
-          console.error('Error processing zap event:', error)
+          console.error(`Error processing ${subscriptionId} event:`, error)
         }
       },
       oneose() {
@@ -523,22 +512,137 @@ class NostrWatcher {
         const attempts = self.reconnectAttempts.get(subscriptionId) || 0
 
         if (attempts < self.maxReconnectAttempts) {
-          console.log(`Socket closed, reconnecting to zaps (attempt ${attempts + 1}/${self.maxReconnectAttempts})...`)
+          console.log(`Socket closed, reconnecting ${subscriptionId} (attempt ${attempts + 1}/${self.maxReconnectAttempts})...`)
           self.reconnectAttempts.set(subscriptionId, attempts + 1)
 
           setTimeout(() => {
-            if (!self.destroyed) {
-              self.subscribeZaps(nostrActivities, callback)
-            }
-          }, self.reconnectDelay * Math.pow(2, attempts)) // Exponential backoff
+            if (!self.destroyed) resubscribe()
+          }, self.reconnectDelay * Math.pow(2, attempts))
         } else {
-          console.error('Max reconnection attempts reached for zaps subscription')
+          console.error(`Max reconnection attempts reached for ${subscriptionId}`)
           cleanup()
         }
       }
     })
 
     this.subscriptions.push({ id: subscriptionId, sub, cleanup })
+  }
+
+  subscribeNostrZaps(nostrActivity, callback) {
+    return this.subscribeMultiNostrZaps([nostrActivity], callback)
+  }
+
+  subscribeMultiNostrZaps(nostrActivities, callback, subscriptionId) {
+    if (this.destroyed) return
+
+    if (!subscriptionId) subscriptionId = `nostr-zaps-${this.subscriptionCount++}`
+    const parsedActivities = nostrActivities.map(activity => this.parseActivity(activity))
+
+    this.subscribeEvents(subscriptionId, {
+      '#a': parsedActivities,
+      'kinds': [9735],
+    }, async (event, getIsOld) => {
+      const tags = this.tagsToMap(event.tags)
+
+      if (!tags.description || !tags.bolt11) {
+        console.warn('Missing required tags in zap event')
+        return
+      }
+
+      const zapRequest = JSON.parse(tags.description[0])
+      const value_msat_total = this.getMsatsFromBolt11(tags.bolt11[0])
+
+      if (!value_msat_total) {
+        console.warn('Could not parse sats from bolt11')
+        return
+      }
+
+      const profile = await this.getNostrProfile(zapRequest.pubkey)
+      const message = await this.resolveNostrReferences(event.content)
+
+      callback({
+        type: 'zap',
+        action: 'zap',
+        identifier: event.id,
+        creation_date: event.created_at,
+        sender_name: profile.display_name || profile.name || 'Anonymous',
+        picture: profile.picture || null,
+        app_name: 'Nostr',
+        podcast: 'Nostr',
+        event_guid: null,
+        episode_guid: null,
+        episode: null,
+        sats: Math.floor(value_msat_total / 1000),
+        message: message,
+        isOld: getIsOld(),
+      })
+    }, () => this.subscribeMultiNostrZaps(nostrActivities, callback, subscriptionId))
+  }
+
+  subscribeLnzaps(pubkeys, eventGuids, since, callback, subscriptionId) {
+    if (this.destroyed) return
+
+    const parsedPubkeys = pubkeys.map(pubkey => this.parsePubkey(pubkey)).filter(Boolean)
+    if (!parsedPubkeys.length) return
+
+    if (!subscriptionId) subscriptionId = `lnzaps-${this.subscriptionCount++}`
+    const allowed = new Set(eventGuids || [])
+    const filters = {
+      'kinds': [9735],
+      '#p': parsedPubkeys,
+    }
+    if (since) filters.since = since
+
+    this.subscribeEvents(subscriptionId, filters, async (event, getIsOld) => {
+      const tags = this.tagsToMap(event.tags)
+
+      if (!tags.description || !tags.bolt11) {
+        console.warn('Missing required tags in zap event')
+        return
+      }
+
+      const zapRequest = JSON.parse(tags.description[0])
+      const requestTags = this.tagsToMap(zapRequest.tags)
+      const eventGuid = requestTags.eventGuid?.[0]
+
+      if (!eventGuid || !allowed.has(eventGuid)) return
+
+      const value_msat_total = this.getMsatsFromBolt11(tags.bolt11[0])
+
+      if (!value_msat_total) {
+        console.warn('Could not parse sats from bolt11')
+        return
+      }
+
+      let senderName = requestTags.payerName?.[0] || null
+      let picture = null
+      const senderPubkey = requestTags.senderPubkey?.[0]
+
+      if (!senderName && senderPubkey) {
+        const profile = await this.getNostrProfile(senderPubkey)
+        senderName = profile.display_name || profile.name || null
+        picture = profile.picture || null
+      }
+
+      const message = await this.resolveNostrReferences(zapRequest.content)
+
+      callback({
+        type: 'zap',
+        action: 'zap',
+        identifier: event.id,
+        creation_date: event.created_at,
+        sender_name: senderName || 'Anonymous',
+        picture,
+        app_name: 'Lightning',
+        podcast: this.tagWithPrefix(requestTags, 'i', 'podcast:guid:'),
+        event_guid: eventGuid,
+        episode_guid: this.tagWithPrefix(requestTags, 'i', 'podcast:item:guid:'),
+        episode: requestTags.title?.[0] || null,
+        sats: Math.floor(value_msat_total / 1000),
+        message,
+        isOld: getIsOld(),
+      })
+    }, () => this.subscribeLnzaps(pubkeys, eventGuids, since, callback, subscriptionId))
   }
 
   getNostrProfile(pubkey) {
