@@ -120,7 +120,7 @@ class PaymentTracker {
   subscribeLnzaps() {
     this.nostrWatcher.subscribeLnzaps(
       this.lnzapPkeys,
-      this.lnzapNostrEvent,
+      this.lnzapNostrEvent ? [this.lnzapNostrEvent] : [],
       this.lnzapEventGuids,
       this.filters.after,
       (item) => {
@@ -170,7 +170,7 @@ class PaymentTracker {
         await this.subscribeNostrZapsForNpub()
       }
 
-      if (this.lnzapPkeys.length) {
+      if (this.lnzapPkeys.length || this.lnzapNostrEvent) {
         this.subscribeLnzaps()
       }
     } catch (error) {
@@ -592,15 +592,15 @@ class NostrWatcher {
       'kinds': [9735],
     }
 
-    if (pubkeys) {
+    if (pubkeys?.length) {
       filters['#p'] = pubkeys.map(pubkey => this.parsePubkey(pubkey))
     }
 
-    if (nostrActivities) {
+    if (nostrActivities?.length) {
       filters['#a'] = nostrActivities.map(activity => this.parseActivity(activity))
     }
 
-    if (!filters['#p'].length && !filters['#a'].length) {
+    if (!filters['#p'] && !filters['#a']) {
       console.warn('No pubkeys or activities provided')
       return
     }
