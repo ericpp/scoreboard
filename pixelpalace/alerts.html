@@ -82,6 +82,38 @@ body {
   white-space: pre-line;
   text-align: left;
 }
+
+.effectImage {
+  display: none;
+}
+
+.message.effect {
+  width: auto;
+  aspect-ratio: auto;
+  left: 50%;
+  bottom: 260px;
+  transform: translateX(-50%);
+  background: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  color: #fff;
+  text-shadow: 3px 3px 0 #000;
+}
+
+.message.effect .effectImage {
+  display: block;
+  height: 320px;
+  width: auto;
+  image-rendering: pixelated;
+}
+
+.message.effect .messageText {
+  width: auto;
+  max-width: 900px;
+  padding: 18px 0 0;
+  text-align: center;
+}
 </style>
 </head>
 
@@ -94,6 +126,7 @@ body {
         <source src="" type="video/webm">
       </video>
       <div class="message" data-timeshow="2">
+        <img class="effectImage" alt="">
         <div class="messageText" style="flex: 1 1"></div>
       </div>
     </div>
@@ -123,10 +156,38 @@ body {
       }, delay)
     }
 
+    const effectIcons = {
+      wide: "effects/telescope.png",
+      bubbles: "effects/bubbles.png",
+      fence: "effects/fence.png",
+      dj: "effects/dj.png",
+      festoons: "effects/festoons.png",
+      discoball: "effects/discoball.png",
+    }
+
     const events = {
       messageRender: () => [],
 
       messageShow: (payment) => {
+        const box = document.querySelector(".message")
+        const image = box.querySelector(".effectImage")
+
+        if (payment.type === 'effect' && effectIcons[payment.effect_id]) {
+          clearInterval(typer)
+          box.classList.add("effect")
+          image.src = effectIcons[payment.effect_id]
+          image.alt = payment.effect_label || payment.effect_id
+          let text = payment.sender_name || ""
+          if (payment.message && payment.message !== payment.effect_label) {
+            text += `\n${payment.message}`
+          }
+          document.querySelector(".messageText").textContent = text
+          return
+        }
+
+        box.classList.remove("effect")
+        image.removeAttribute("src")
+
         const verb = payment.type == 'boost' ? 'boosted'
           : payment.type == 'lnzap' ? 'sent'
           : 'zapped'
@@ -137,8 +198,13 @@ body {
 
       messageHide: () => {
         clearInterval(typer)
+        const box = document.querySelector(".message")
+        box.classList.remove("effect")
+        box.querySelector(".effectImage").removeAttribute("src")
       },
     }
+
+    const effectImages = [...Array(10).keys()].map(d => `${base}/${d}.webm`)
 
     // TODO: replace with the pixelpalace podcast, episode, and event ids
     const filters = {
@@ -151,12 +217,15 @@ body {
       slots: [{
         id: "#alert",
         triggers,
+        effectImages,
         events,
       }],
       lnzapPkeys: ["npub1gfh3zdy07r37mgk4hyr0njmajapswk4ct6anc9w407uqkn39aslqqkalqc"],
       lnzapEventGuids: ["c530c8eb-5e42-4daa-b00a-e31169935537"],
       loadZaps: false,
       loadBoosts: false,
+      watchEffects: true,
+      effectsSocketUrl: "wss://live.pixelpalace.party/api/live/ws",
       ...filters,
     })
   })()

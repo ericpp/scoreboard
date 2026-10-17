@@ -13,6 +13,9 @@ class PaymentTracker {
     this.lnzapPkeys = config.lnzapPkeys || []
     this.lnzapNostrEvent = config.lnzapNostrEvent || null
     this.lnzapEventGuids = config.lnzapEventGuids || []
+    this.effectsSocketUrl = config.effectsSocketUrl || null
+    this.watchEffects = config.watchEffects ?? false
+    this.effectWatcher = null
     this.loadBoosts = config.loadBoosts ?? true
     this.loadZaps = config.loadZaps ?? true
     this.loadLnzaps = config.loadLnzaps ?? true
@@ -84,6 +87,10 @@ class PaymentTracker {
     this.lnzapEventGuids = guids
   }
 
+  setEffectsSocketUrl(url) {
+    this.effectsSocketUrl = url
+  }
+
   setListener(listener) {
     if (typeof listener !== 'function') {
       throw new Error('Listener must be a function')
@@ -112,6 +119,14 @@ class PaymentTracker {
 
   subscribeNostrZaps() {
     this.nostrWatcher.subscribeNostrZaps(this.nostrZapEvent, (item) => {
+      if (this.destroyed) return
+      this.add(item)
+    })
+  }
+
+  subscribeEffects() {
+    this.effectWatcher = new EffectWatcher(this.effectsSocketUrl)
+    this.effectWatcher.subscribe((item) => {
       if (this.destroyed) return
       this.add(item)
     })
@@ -173,6 +188,10 @@ class PaymentTracker {
       if (this.lnzapPkeys.length || this.lnzapNostrEvent) {
         this.subscribeLnzaps()
       }
+
+      if (this.watchEffects && this.effectsSocketUrl) {
+        this.subscribeEffects()
+      }
     } catch (error) {
       console.error('Error starting PaymentTracker:', error)
       throw error
@@ -214,6 +233,7 @@ class PaymentTracker {
     // Sanitize user-provided text fields
     if (payment.sender_name) payment.sender_name = this.sanitize(payment.sender_name)
     if (payment.message) payment.message = this.sanitize(payment.message)
+    if (payment.effect_label) payment.effect_label = this.sanitize(payment.effect_label)
 
     if (payment.isTest) {
       this.listener(payment, payment.isOld)
@@ -226,8 +246,8 @@ class PaymentTracker {
     if (payment.isOld && payment.type === 'zap' && !this.loadZaps) return
     if (payment.isOld && payment.type === 'lnzap' && !this.loadLnzaps) return
 
-    // Skip invalid or duplicate payments
-    if (!payment.sats || isNaN(payment.sats)) return
+    // Skip invalid or duplicate payments. Effects carry no sats.
+    if (payment.type !== 'effect' && (!payment.sats || isNaN(payment.sats))) return
     if (this.identifiers.includes(payment.identifier)) return
 
     // Apply filters
@@ -272,11 +292,112 @@ class PaymentTracker {
 
   destroy() {
     this.destroyed = true
+    if (this.effectWatcher) {
+      this.effectWatcher.destroy()
+    }
     if (this.nostrWatcher) {
       this.nostrWatcher.destroy()
     }
     this.identifiers = []
     this.listener = null
+  }
+}
+
+class EffectWatcher {
+  constructor(url) {
+    this.url = url
+    this.socket = null
+    this.destroyed = false
+    this.reconnectAttempts = 0
+    this.maxReconnectAttempts = 5
+    this.reconnectDelay = 1000
+    this.callback = null
+  }
+
+  subscribe(callback) {
+    this.callback = callback
+    this.connect()
+  }
+
+  connect() {
+    if (this.destroyed) return
+
+    let socket
+    try {
+      socket = new WebSocket(this.url)
+    } catch (error) {
+      console.error('Effects socket URL is invalid:', error)
+      return
+    }
+
+    this.socket = socket
+
+    socket.addEventListener('open', () => {
+      this.reconnectAttempts = 0
+    })
+
+    socket.addEventListener('message', (event) => {
+      if (this.destroyed || socket !== this.socket) return
+
+      let message
+      try {
+        message = JSON.parse(event.data)
+      } catch (error) {
+        return
+      }
+
+      if (message?.type !== 'effect' || !message.effect) return
+
+      const effect = message.effect
+      const senderName = typeof effect.senderName === 'string' ? effect.senderName.trim() : ''
+
+      this.callback({
+        type: 'effect',
+        action: 'effect',
+        identifier: (crypto.randomUUID && crypto.randomUUID()) || String(Math.random()),
+        creation_date: Math.floor(Date.now() / 1000),
+        sender_name: senderName || 'Anonymous',
+        effect_id: effect.id || '',
+        effect_label: effect.label || effect.id || 'effect',
+        message: effect.message || '',
+        sats: 0,
+        isOld: false,
+      })
+    })
+
+    socket.addEventListener('close', (event) => {
+      if (this.socket === socket) this.socket = null
+      if (this.destroyed) return
+      if (event.code === 1008) {
+        console.error('Effects socket disabled by server')
+        return
+      }
+
+      this.scheduleReconnect()
+    })
+  }
+
+  scheduleReconnect() {
+    const attempts = this.reconnectAttempts
+    if (attempts >= this.maxReconnectAttempts) {
+      console.error('Max reconnection attempts reached for effects socket')
+      return
+    }
+
+    console.log(`Socket closed, reconnecting to effects (attempt ${attempts + 1}/${this.maxReconnectAttempts})...`)
+    this.reconnectAttempts++
+
+    setTimeout(() => {
+      if (!this.destroyed) this.connect()
+    }, this.reconnectDelay * Math.pow(2, attempts))
+  }
+
+  destroy() {
+    this.destroyed = true
+    if (this.socket) {
+      this.socket.close()
+      this.socket = null
+    }
   }
 }
 

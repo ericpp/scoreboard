@@ -77,6 +77,7 @@ class AlertSlot {
     this.alert = mediaElement.tagName === "IMG" ? new AlertImage(mediaElement) : new AlertVideo(mediaElement)
 
     this.images = options.images || []
+    this.effectImages = options.effectImages || []
     this.triggers = options.triggers || []
     this.events = options.events || {}
     this.message = options.message || {}
@@ -110,6 +111,26 @@ class AlertSlot {
   }
 
   pickImage(payment, isReplay) {
+    if (payment.type === 'effect') {
+      if (this.effectImages.length) {
+        this.selectedImage = null
+        const index = Math.floor(Math.random() * this.effectImages.length)
+        this.alert.setUrl(this.effectImages[index])
+        return
+      }
+
+      if (this.images.length) {
+        this.selectedImage = Math.floor(Math.random() * this.images.length)
+        this.alert.setUrl(this.images[this.selectedImage])
+        return
+      }
+
+      const sources = this.triggers.map(trig => trig.src).filter(Boolean)
+      this.selectedImage = null
+      this.alert.setUrl(sources.length ? sources[Math.floor(Math.random() * sources.length)] : '')
+      return
+    }
+
     if (this.triggers.length) {
       const strSats = String(payment.sats)
 
@@ -198,6 +219,15 @@ class AlertSlot {
       return renderer(payment)
     }
 
+    if (payment.type === 'effect') {
+      const label = payment.effect_label || payment.effect_id || 'an effect'
+      const lines = [`${escapeHtml(payment.sender_name)} triggered ${escapeHtml(label)}`]
+      if (payment.message && payment.message !== payment.effect_label) {
+        lines.push(escapeHtml(payment.message))
+      }
+      return lines
+    }
+
     const sats = payment.sats.toLocaleString()
     const userMessage = this.showMessages
       ? payment.message
@@ -236,6 +266,8 @@ async function startAlerts(config = {}) {
     loadBoosts: false,
     loadZaps: false,
     loadLnzaps: false,
+    watchEffects: false,
+    effectsSocketUrl: null,
     showMessages: false,
     nostrBoostPkey: "npub1sp8w4t66l3nu46d22zn2uq6hrtnf8l9jw775p4jtje439h96yh8qzmpw6q",
     excludePodcasts: ["Podcasting 2.0"],
@@ -257,6 +289,11 @@ async function startAlerts(config = {}) {
   let paymentCounter = 0
 
   function paymentReceived(payment) {
+    if (payment.type === 'effect') {
+      alertQueue.push(payment)
+      return
+    }
+
     satTotal = satTotal + payment.sats
 
     if (payment.action !== 'boost' && payment.type !== 'zap' && payment.type !== 'lnzap') {
@@ -345,6 +382,10 @@ async function startAlerts(config = {}) {
     if (url.loadBoosts) app.loadBoosts = true
     if (url.loadZaps) app.loadZaps = true
     if (url.loadLnzaps) app.loadLnzaps = true
+    if (url.effectsWs) {
+      app.watchEffects = true
+      app.setEffectsSocketUrl(url.effectsWs)
+    }
 
     if (url.test) {
       paymentReceived({
@@ -368,6 +409,21 @@ async function startAlerts(config = {}) {
       app.loadBoosts = true
       app.loadZaps = true
       app.loadLnzaps = true
+    }
+
+    if (url.testEffect) {
+      paymentReceived({
+        type: 'effect',
+        action: 'effect',
+        identifier: 'test-effect',
+        creation_date: Math.floor(Date.now() / 1000),
+        sender_name: 'Anonymous',
+        effect_id: url.testEffect,
+        effect_label: url.testEffect,
+        message: 'test effect',
+        sats: 0,
+        isOld: false,
+      })
     }
 
     if (url.replay) {
