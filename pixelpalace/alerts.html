@@ -83,16 +83,21 @@ body {
   text-align: left;
 }
 
+#alert.effect video.background {
+  visibility: hidden;
+}
+
 .message.effect {
   width: auto;
-  max-width: 900px;
+  max-width: 1600px;
   aspect-ratio: auto;
   left: 50%;
   bottom: 260px;
   transform: translateX(-50%);
   background: none;
   color: #fff;
-  text-shadow: 3px 3px 0 #000;
+  font-size: 64px;
+  text-shadow: 5px 5px 0 #000;
 }
 
 .message.effect .messageText {
@@ -151,7 +156,10 @@ body {
     }
 
     const events = {
-      messageRender: () => [],
+      messageRender: (payment) => {
+        document.querySelector("#alert").classList.toggle("effect", payment.type === "effect")
+        return []
+      },
 
       messageShow: (payment) => {
         const box = document.querySelector(".message")
