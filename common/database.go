@@ -48,9 +48,11 @@ func saveInvoice(invoice IncomingInvoice) (bool, error) {
 	boostagram := invoice.GetBoostagram()
 	insertSQL :=
 		`INSERT INTO invoices
-        (amount, boostagram, comment, created_at, creation_date, description, identifier, payer_name, payment_hash, value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid, action, event_guid)
+        (amount, boostagram, comment, created_at, creation_date, description, identifier, payer_name, payment_hash,
+		value, podcast, episode, app_name, sender_name, message, value_msat_total, feed_id, item_id, guid, episode_guid,
+		action, event_guid, remote_feed_guid, remote_item_guid)
     VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
     ON CONFLICT (payment_hash) DO NOTHING`
 
 	result, err := db.Exec(
@@ -77,6 +79,8 @@ func saveInvoice(invoice IncomingInvoice) (bool, error) {
 		boostagram.EpisodeGuid,
 		boostagram.Action,
 		boostagram.EventGuid,
+		boostagram.RemoteFeedGuid,
+		boostagram.RemoteItemGuid,
 	)
 
 	if err != nil {
@@ -129,8 +133,10 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
         guid = $10,
         episode_guid = $11,
         action = $12,
-        event_guid = $13
-    WHERE payment_hash = $14`
+        event_guid = $13,
+        remote_feed_guid = $14,
+        remote_item_guid = $15
+    WHERE payment_hash = $16`
 
 	_, err = db.Exec(
 		updateSQL,

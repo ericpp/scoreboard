@@ -162,6 +162,8 @@ type PodcastGuruMetadata struct {
 	SenderName     string  `json:"sender_name"`
 	ValueMsatTotal int     `json:"value_msat_total"`
 	BoostLink      string  `json:"boost_link"`
+	RemoteFeedGuid string  `json:"remote_feed_guid"`
+	RemoteItemGuid string  `json:"remote_item_guid"`
 }
 
 type HelipadPaymentInfo struct {
