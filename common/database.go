@@ -153,6 +153,8 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
 		boostagram.EpisodeGuid,
 		boostagram.Action,
 		boostagram.EventGuid,
+		boostagram.RemoteFeedGuid,
+		boostagram.RemoteItemGuid,
 		invoice.PaymentHash,
 	)
 
