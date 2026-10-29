@@ -58,8 +58,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := common.PublishInvoiceToNostr(invoice); err != nil {
-		log.Printf("failed to publish boost to nostr: %v", err)
+	if webhook.RemotePodcast != "" && webhook.RemoteEpisode != "" {
+		remoteItemNames := common.RemoteItemNames{
+			Podcast: webhook.RemotePodcast,
+			Episode: webhook.RemoteEpisode,
+		}
+
+		if err := common.UpdateRemoteItemNames(invoice.PaymentHash, remoteItemNames); err != nil {
+			log.Printf("failed to update remote item names: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)

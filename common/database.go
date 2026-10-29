@@ -160,3 +160,27 @@ func UpdateDatabaseWithRSSPayment(invoice IncomingInvoice) error {
 
 	return err
 }
+
+func UpdateRemoteItemNames(payment_hash string, remoteitemnames RemoteItemNames) error {
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	log.Printf("updating %s with remote item names", payment_hash)
+
+	updateSQL := `UPDATE invoices SET
+		remote_podcast = $1,
+		remote_episode = $2
+	WHERE payment_hash = $3`
+
+	_, err = db.Exec(
+		updateSQL,
+		remoteitemnames.Podcast,
+		remoteitemnames.Episode,
+		payment_hash,
+	)
+
+	return err
+}

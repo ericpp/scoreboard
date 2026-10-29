@@ -74,6 +74,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	remoteitemnames, err := common.FetchRemoteNamesIfNeeded(&invoice);
+	if err != nil {
+		log.Printf("failed to fetch remote names: %v", err)
+	} else if err := common.UpdateRemoteItemNames(invoice.PaymentHash, remoteitemnames); err != nil {
+		log.Printf("failed to update remote item names: %v", err)
+	}
+
 	if err := common.PublishInvoiceToNostr(invoice); err != nil {
 		log.Printf("failed to publish to nostr: %v", err)
 	}
