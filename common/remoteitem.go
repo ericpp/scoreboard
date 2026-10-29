@@ -31,11 +31,6 @@ func FetchRemoteNamesIfNeeded(invoice *IncomingInvoice) (RemoteItemNames, error)
 		return RemoteItemNames{}, nil
 	}
 
-	boostagram := invoice.GetBoostagram()
-	if boostagram.RemotePodcast != "" && boostagram.RemoteEpisode != "" {
-		return RemoteItemNames{}, nil
-	}
-
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}

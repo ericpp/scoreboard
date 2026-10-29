@@ -72,12 +72,6 @@ func mergeHelipadBoostagram(webhook HelipadWebhook, tlv Boostagram) Boostagram {
 	if tlv.Action == "" && webhook.Action == 2 {
 		tlv.Action = "boost"
 	}
-	if tlv.RemotePodcast == "" {
-		tlv.RemotePodcast = webhook.RemotePodcast
-	}
-	if tlv.RemoteEpisode == "" {
-		tlv.RemoteEpisode = webhook.RemoteEpisode
-	}
 
 	return tlv
 }
