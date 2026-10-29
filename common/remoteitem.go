@@ -31,6 +31,8 @@ func FetchRemoteNamesIfNeeded(invoice *IncomingInvoice) (RemoteItemNames, error)
 		return RemoteItemNames{}, nil
 	}
 
+	boostagram := invoice.GetBoostagram()
+
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
